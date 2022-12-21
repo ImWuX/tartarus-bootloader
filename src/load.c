@@ -8,7 +8,6 @@ void load() {
     log("Tartarus | Protected Mode\n");
 
     e820_load();
-
     pmm_initialize();
     log("Tartarus | Physical Memory Initialized\n");
 

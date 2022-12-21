@@ -4,8 +4,9 @@ KB_CMD equ 0x64
 KB_DATA equ 0x60
 
 ;
-; Attempts to enable the A20 line.
-; If it fails, it hangs.
+; Attempts to enable the A20 line
+; Returns:
+;   cf = success
 ;
 enable_a20:
     pusha
@@ -64,14 +65,13 @@ enable_a20:
     cmp ax, 1                                   ; Check if A20 is enabled
     je .success
 
-    mov bx, TXT_ERROR_A20
-    call print                                  ; Print error
-
-    cli
-    hlt
+    popa
+    clc
+    ret
 
 .success:
     popa
+    stc
     ret                                         ; A20 line enabled
 
 .wait_kb_write:
@@ -87,7 +87,7 @@ enable_a20:
     ret
 
 ;
-; Tests if the A20 line is enabled.
+; Tests if the A20 line is enabled
 ; Returns:
 ;   ax: 1 if the a20 line is disabled, 0 if it is enabled
 ;

@@ -1,5 +1,6 @@
 #include "pmm.h"
 #include <stdbool.h>
+#include <e820.h>
 #include <log.h>
 
 #define PAGE_SIZE 0x1000
@@ -7,7 +8,7 @@
 #define MAX_MEMAP_ENTRIES 255
 #define LOWEST_MEMORY_BOUNDARY 0x1000
 
-extern uint8_t ld_mmap[], ld_bootloader_end[];
+extern uint8_t ld_bootloader_end[];
 
 boot_memap_entry_t *g_memap;
 uint16_t g_memap_length;
@@ -64,8 +65,8 @@ static bool memap_claim(uint64_t base, uint64_t length, boot_memap_entry_type_t 
 }
 
 void pmm_initialize() {
-    uint16_t e820_length = *(uint16_t *) ld_mmap;
-    e820_entry_t *e820 = (e820_entry_t *) (ld_mmap + 2);
+    uint16_t e820_length = *(uint16_t *) E820_ADDRESS;
+    e820_entry_t *e820 = (e820_entry_t *) (E820_ADDRESS + 2);
 
     g_memap = (boot_memap_entry_t *) ld_bootloader_end;
     g_memap_length = 0;

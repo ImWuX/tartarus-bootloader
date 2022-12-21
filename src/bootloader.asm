@@ -15,9 +15,23 @@ entry_real:
     mov ss, ax
 
     call test_long_mode                         ; Make sure we can eventually boot into long mode
+    jc .long_mode
 
+    mov bx, TXT_ERROR_LONG_MODE
+    call print
+    cli
+    hlt
+
+.long_mode:
     call enable_a20                             ; Enable the a20 line
+    jc .a20
 
+    mov bx, TXT_ERROR_A20
+    call print
+    cli
+    hlt
+
+.a20:
     cli
     lgdt [gdt.descriptor]                       ; Load gdt
 

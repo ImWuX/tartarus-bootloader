@@ -1,8 +1,9 @@
 bits 16
 
 ;
-; Checks if long mode is available.
-; If not it hangs
+; Checks if long mode is available
+; Returns:
+;   cf = is available
 ;
 test_long_mode:
     pusha
@@ -11,9 +12,7 @@ test_long_mode:
     pushfd
     pop eax
     mov ecx, eax
-
     xor eax, 1 << 21
-
     push eax
     popfd
 
@@ -36,10 +35,10 @@ test_long_mode:
     jz .failed
 
     popa
+    stc
     ret
 
 .failed:
-    mov bx, TXT_ERROR_LONG_MODE
-    call print
-    cli
-    hlt
+    popa
+    clc
+    ret

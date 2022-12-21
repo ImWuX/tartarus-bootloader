@@ -5,14 +5,12 @@
 
 #define MAGIC_NUMBER 0x534D4150
 
-extern uint8_t ld_mmap[];
-
 void e820_load() {
     uint16_t count = 0;
 
     int_regs_t regs;
     regs.es = 0;
-    regs.edi = (uint32_t) &ld_mmap + 2;
+    regs.edi = E820_ADDRESS + 2;
     regs.ebx = 0;
     while(true) {
         *((uint32_t *) regs.edi + 20) = 1;
@@ -25,7 +23,7 @@ void e820_load() {
             regs.edi += 24;
             count++;
         } else {
-            *((uint16_t *) ld_mmap) = count;
+            *((uint16_t *) E820_ADDRESS) = count;
             break;
         }
     }

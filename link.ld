@@ -1,7 +1,6 @@
 OUTPUT_FORMAT(binary)
 ENTRY(ld_bootloader_start)
 
-ld_mmap = 0x500;
 ld_bootloader_start = 0x8000;
 
 SECTIONS
