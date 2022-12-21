@@ -1,7 +1,5 @@
 extern ld_mmap
 extern load
-extern log
-extern disk_read
 
 bits 16
 section .entry
@@ -41,9 +39,6 @@ entry_protected:
     mov fs, eax
     mov gs, eax
 
-    push byte 0x10
-    call exec_int
-    add esp, 1
     call load
 
     mov ecx, 0xC0000080
@@ -72,6 +67,5 @@ entry_long:
 %include "includes/int.inc"
 
 section .data
-TXT_TEST:               db "$, $\n", 0
 TXT_ERROR_A20:          db "Tartarus Panic | Failed to enable the A20 line", 0
 TXT_ERROR_LONG_MODE:    db "Tartarus Panic | Your machine does not support long mode (x86_64)", 0

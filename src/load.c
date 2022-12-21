@@ -1,6 +1,7 @@
 #include <log.h>
 #include <vmm.h>
 #include <pmm.h>
+#include <int.h>
 
 void load() {
     log_clear();
