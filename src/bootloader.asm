@@ -1,5 +1,7 @@
 extern ld_mmap
 extern load
+extern log
+extern disk_read
 
 bits 16
 section .entry
@@ -22,7 +24,7 @@ entry_real:
     call setup_mmap                             ; Load bios memory map
 
     cli
-    lgdt [gdt.descriptor]                       ; Load protected mode gdt
+    lgdt [gdt.descriptor]                       ; Load gdt
 
     mov eax, cr0
     or eax, 1                                   ; Set protected mode bit
@@ -32,7 +34,16 @@ entry_real:
 
 bits 32
 entry_protected:
+    mov eax, DATA_SEGMENT
+    mov ds, eax
+    mov ss, eax
+    mov es, eax
+    mov fs, eax
+    mov gs, eax
 
+    push byte 0x10
+    call exec_int
+    add esp, 1
     call load
 
     mov ecx, 0xC0000080
@@ -44,8 +55,7 @@ entry_protected:
     or eax, 1 << 31                             ; Set paging bit
     mov cr0, eax                                ; Enable paging
 
-    call gdt_elevate_long                       ; Modify GDT to be long mode compatible
-
+    call gdt_set_long                           ; Modify GDT to be long mode compatible
     jmp CODE_SEGMENT:entry_long                 ; Long jump into long mode gdt segment
 
 bits 64
@@ -59,7 +69,9 @@ entry_long:
 %include "includes/print.inc"
 %include "includes/long_mode.inc"
 %include "includes/mmap.inc"
+%include "includes/int.inc"
 
 section .data
+TXT_TEST:               db "$, $\n", 0
 TXT_ERROR_A20:          db "Tartarus Panic | Failed to enable the A20 line", 0
 TXT_ERROR_LONG_MODE:    db "Tartarus Panic | Your machine does not support long mode (x86_64)", 0

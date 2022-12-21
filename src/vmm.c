@@ -29,9 +29,9 @@ void vmm_initialize(boot_memap_entry_t *memory_map, uint16_t memory_map_length) 
     pmm_set(0, (uint8_t *) g_pml4, 0x1000);
 
     for(uint16_t i = 0; i < memory_map_length; i++) {
-        if(memory_map[i].type == BOOT_MEMAP_TYPE_BAD) continue;
+        if(memory_map[i].type != BOOT_MEMAP_TYPE_USABLE) continue;
         uint64_t address = memory_map[i].base_address;
-        address &= HHDM_OFFSET;
+        address &= 0xFFFFFFFFFFFFF000;
         while(address < memory_map[i].base_address + memory_map[i].length) {
             if(address % 0x200000 == 0 && address + 0x200000 < memory_map[i].base_address + memory_map[i].length) {
                 vmm_map_memory_2mb(address, address);
