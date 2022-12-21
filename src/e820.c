@@ -9,6 +9,7 @@ void e820_load() {
     uint16_t count = 0;
 
     int_regs_t regs;
+    pmm_set(0, &regs, sizeof(int_regs_t));
     regs.es = 0;
     regs.edi = E820_ADDRESS + 2;
     regs.ebx = 0;

@@ -2,7 +2,7 @@ bits 32
 global int_exec
 int_exec:
     mov al, byte [esp + 4]
-    mov byte [.int_no], al                           ; Save the interrupt number of the stack
+    mov byte [.int_no], al                      ; Save the interrupt number of the stack
 
     mov eax, dword [esp + 8]
     mov dword [.regs], eax                      ; Save the pointer to regs
@@ -80,7 +80,6 @@ bits 16
     mov cr0, eax
 
     call gdt_set_protected                      ; Modify GDT to be protected mode compatible
-
     jmp CODE_SEGMENT:.protectedseg              ; Jump to protected segment
 
 .protectedseg:

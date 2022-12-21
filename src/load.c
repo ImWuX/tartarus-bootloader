@@ -2,10 +2,13 @@
 #include <e820.h>
 #include <vmm.h>
 #include <pmm.h>
+#include <disk.h>
 
 void load() {
     log_clear();
     log("Tartarus | Protected Mode\n");
+
+    disk_initialize();
 
     e820_load();
     pmm_initialize();

@@ -70,11 +70,11 @@ entry_long:
     cli
     hlt
 
+%include "includes/int.inc"
 %include "includes/gdt.inc"
 %include "includes/a20.inc"
 %include "includes/print.inc"
 %include "includes/long_mode.inc"
-%include "includes/int.inc"
 
 section .data
 TXT_ERROR_A20:          db "Tartarus Panic | Failed to enable the A20 line", 0
