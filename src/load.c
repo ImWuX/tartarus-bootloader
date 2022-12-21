@@ -1,11 +1,13 @@
 #include <log.h>
+#include <e820.h>
 #include <vmm.h>
 #include <pmm.h>
-#include <int.h>
 
 void load() {
     log_clear();
     log("Tartarus | Protected Mode\n");
+
+    e820_load();
 
     pmm_initialize();
     log("Tartarus | Physical Memory Initialized\n");

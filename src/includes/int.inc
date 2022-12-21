@@ -1,8 +1,8 @@
 bits 32
 global int_exec
 int_exec:
-    mov al, [esp + 4]
-    mov [.int_no], al                           ; Save the interrupt number of the stack
+    mov al, byte [esp + 4]
+    mov byte [.int_no], al                           ; Save the interrupt number of the stack
 
     mov eax, dword [esp + 8]
     mov dword [.regs], eax                      ; Save the pointer to regs
@@ -10,6 +10,11 @@ int_exec:
     sgdt [.gdt]                                 ; Save GDT just in case bios overwrites it
 
 	lidt [.idt]                                 ; Load BIOS idt
+
+    push ebx                                    ; Push non scratch registers
+    push esi
+    push edi
+    push ebp
 
     call gdt_set_real                           ; Modify the GDT to be real mode compatible
     jmp CODE_SEGMENT:.realseg                   ; Jump to real mode segment
@@ -86,6 +91,11 @@ bits 32
 	mov fs, eax
 	mov gs, eax
 	mov ss, eax
+
+    pop ebp                                     ; Load back non scratch registers
+    pop edi
+    pop esi
+    pop ebx
 
     ret
 

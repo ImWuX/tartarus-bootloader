@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define INT_REGS_EFLAGS_CF (1 << 0)
+#define INT_REGS_EFLAGS_ZF (1 << 6)
+
 typedef struct {
     uint16_t gs;
     uint16_t fs;

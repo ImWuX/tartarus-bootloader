@@ -18,9 +18,6 @@ entry_real:
 
     call enable_a20                             ; Enable the a20 line
 
-    mov di, ld_mmap
-    call setup_mmap                             ; Load bios memory map
-
     cli
     lgdt [gdt.descriptor]                       ; Load gdt
 
@@ -63,7 +60,6 @@ entry_long:
 %include "includes/a20.inc"
 %include "includes/print.inc"
 %include "includes/long_mode.inc"
-%include "includes/mmap.inc"
 %include "includes/int.inc"
 
 section .data
