@@ -25,7 +25,7 @@ static void setcursor(uint8_t x, uint8_t y) {
     g_y = y;
 }
 
-static void putchar(char c) {
+void log_putchar(char c) {
     uint8_t *buf = (uint8_t *) VGA_TEXT_ADDRESS;
     buf[(VGA_TEXT_WIDTH * g_y + g_x) * 2] = c;
     buf[(VGA_TEXT_WIDTH * g_y + g_x) * 2 + 1] = VGA_TEXT_WHITE_ON_BLACK;
@@ -47,20 +47,20 @@ void log(char *str, ...) {
                 break;
             case '$':
                 if(escaped) {
-                    putchar('$');
+                    log_putchar('$');
                 } else {
                     uint64_t value = va_arg(args, uint64_t);
                     uint64_t pw = 1;
                     while(value / pw >= 16) pw *= 16;
 
-                    putchar('0');
-                    putchar('x');
+                    log_putchar('0');
+                    log_putchar('x');
                     while(pw > 0) {
                         uint8_t c = value / pw;
                         if(c >= 10) {
-                            putchar(c - 10 + 'a');
+                            log_putchar(c - 10 + 'a');
                         } else {
-                            putchar(c + '0');
+                            log_putchar(c + '0');
                         }
                         value %= pw;
                         pw /= 16;
@@ -68,7 +68,7 @@ void log(char *str, ...) {
                 }
                 break;
             default:
-                putchar(*str);
+                log_putchar(*str);
                 break;
         }
         str++;

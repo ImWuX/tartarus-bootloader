@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 void log(char *str, ...);
+void log_putchar(char c);
 void log_panic(char *str);
 void log_clear();
 

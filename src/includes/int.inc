@@ -22,8 +22,7 @@ int_exec:
 .realseg:
 bits 16
     mov eax, cr0
-    mov [.cr0], eax                             ; Save cr0
-    and eax, ~1                                 ; Disable protected mode
+    and al, 0xFE                                ; Disable protected mode
     mov cr0, eax
 
     jmp 0:.zeroseg                              ; Jump to null segment
@@ -100,8 +99,6 @@ bits 32
 
 bits 32
 align 16
-.cr0:
-    dd 0
 .esp:
     dd 0
 .regs:

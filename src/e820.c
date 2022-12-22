@@ -1,5 +1,6 @@
 #include "e820.h"
 #include <stdbool.h>
+#include <pmm.h>
 #include <int.h>
 #include <log.h>
 

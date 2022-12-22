@@ -27,8 +27,8 @@ CODE_SEGMENT equ gdt.code - gdt.null
 DATA_SEGMENT equ gdt.data - gdt.null
 
 gdt_set_protected:
-    mov [gdt.code + 6], byte 11001111b
-    mov [gdt.data + 6], byte 11001111b
+    mov [ss:gdt.code + 6], byte 11001111b
+    mov [ss:gdt.data + 6], byte 11001111b
     ret
 
 bits 32
