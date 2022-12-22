@@ -15,7 +15,12 @@ static bios_param_block_ext_t *g_bpb;
 static void *g_cluster_buffer;
 
 static uint32_t next_cluster(uint32_t cluster_num) {
-    disk_read(g_bpb->bios_param_block.reserved_sector_count + cluster_num / ENTRY_CONST, 1, g_cluster_buffer);
+    static uint64_t last_sector = 0;
+    uint64_t sector = g_bpb->bios_param_block.reserved_sector_count + cluster_num / ENTRY_CONST;
+    if(sector != last_sector) {
+        disk_read(sector, 1, g_cluster_buffer);
+        last_sector = sector;
+    }
     return (((uint32_t *) g_cluster_buffer)[cluster_num % ENTRY_CONST] & 0x0FFFFFFF);
 }
 

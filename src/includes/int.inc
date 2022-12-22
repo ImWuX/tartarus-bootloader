@@ -99,13 +99,9 @@ bits 32
 
 bits 32
 align 16
-.esp:
-    dd 0
-.regs:
-    dd 0
-.gdt:
-    dd 0
-    dd 0
-.idt:
-    dw 0x3FF
-    dd 0
+.esp:   dd 0
+.regs:  dd 0
+.gdt:   dd 0
+        dd 0
+.idt:   dw 0x3FF
+        dd 0

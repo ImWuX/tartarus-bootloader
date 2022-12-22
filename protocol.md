@@ -11,7 +11,7 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
 - CPU is set to long mode
 
 ## The Virtual Memory Map
-- All `USABLE` memory entries starting will be mapped starting at
+- All non `BAD` memory entries will be mapped starting at
     - `0x0000 0000 0000 0000` *Identity mapped*
     - `0xFFFF 8000 0000 0000` *Higher Half Direct Memory (HHDM)*
 - Kernel is mapped according to the ELF file

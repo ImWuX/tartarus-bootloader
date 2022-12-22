@@ -1,4 +1,3 @@
-extern ld_mmap
 extern load
 
 bits 16
@@ -51,6 +50,12 @@ entry_protected:
     mov gs, eax
 
     call load
+    mov dword [kernel_entry + 4], edx
+    mov dword [kernel_entry], eax
+
+    mov eax, cr4
+    or eax, 1 << 5                              ; Enable PAE bit
+    mov cr4, eax                                ; Move the modified register back
 
     mov ecx, 0xC0000080
     rdmsr
@@ -66,9 +71,16 @@ entry_protected:
 
 bits 64
 entry_long:
+    mov rax, DATA_SEGMENT                       ; Reset segments just incase
+    mov ds, rax
+    mov ss, rax
+    mov es, rax
+    mov fs, rax
+    mov gs, rax
 
-    cli
-    hlt
+    jmp [kernel_entry]                          ; Load kernel
+
+kernel_entry:   dq 0
 
 %include "includes/int.inc"
 %include "includes/gdt.inc"

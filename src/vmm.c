@@ -29,7 +29,7 @@ void vmm_initialize(boot_memap_entry_t *memory_map, uint16_t memory_map_length) 
     pmm_set(0, (uint8_t *) g_pml4, 0x1000);
 
     for(uint16_t i = 0; i < memory_map_length; i++) {
-        if(memory_map[i].type != BOOT_MEMAP_TYPE_USABLE) continue;
+        if(memory_map[i].type == BOOT_MEMAP_TYPE_BAD) continue;
         uint64_t address = memory_map[i].base_address;
         address &= 0xFFFFFFFFFFFFF000;
         while(address < memory_map[i].base_address + memory_map[i].length) {
@@ -44,6 +44,8 @@ void vmm_initialize(boot_memap_entry_t *memory_map, uint16_t memory_map_length) 
             }
         }
     }
+
+    vmm_map_memory_2mb(0xB8000, 0xB8000); //TODO: REmove
 
     asm volatile("mov %0, %%cr3" : : "r" (g_pml4));
 }

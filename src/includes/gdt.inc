@@ -20,8 +20,8 @@ gdt:
     db 0x00         ; Base high
 .descriptor:
     dw .descriptor - .null - 1
-    ; // TODO: This is being zero extended. use 32bit operations here
-    dq .null
+    dd .null
+    dd 0
 
 CODE_SEGMENT equ gdt.code - gdt.null
 DATA_SEGMENT equ gdt.data - gdt.null
@@ -38,6 +38,8 @@ gdt_set_real:
     ret
 
 gdt_set_long:
-    mov [gdt.code + 6], byte 10101111b
-    mov [gdt.data + 6], byte 10101111b
+    mov [gdt.code], word 0
+    mov [gdt.data], word 0
+    mov [gdt.code + 6], byte 10100000b
+    mov [gdt.data + 6], byte 10100000b
     ret

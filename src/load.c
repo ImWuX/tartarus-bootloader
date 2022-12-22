@@ -25,11 +25,14 @@ uint64_t load() {
     log("Tartarus | Fat32 Initialized\n");
 
     uint32_t kernel_cluster = fat32_root_find((uint8_t *) KERNEL_FILE);
+    log("Tartarus | Found kernel\n");
+
     elf64_addr_t entry = elf_read_file(kernel_cluster);
     if(entry == 0) {
         log_panic("Failed to load ELF kernel file");
         __builtin_unreachable();
     }
+    log("Tartarus | Kernel Loaded");
 
     return entry;
 }

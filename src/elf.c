@@ -17,37 +17,37 @@ elf64_addr_t elf_read_file(uint32_t cluster_num) {
         header->identifier.file_identifier[2] != ELF_IDENTIFIER2 ||
         header->identifier.file_identifier[3] != ELF_IDENTIFIER3
     ) {
-        log("Invalid ELF identififer");
+        log("Invalid ELF identififer\n");
         return 0;
     }
 
     if(header->identifier.architecture != ELF_ARCH_64) {
-        log("Unsupported architecture (Only 64bit is supported)");
+        log("Unsupported architecture (Only 64bit is supported)\n");
         return 0;
     }
 
     if(header->identifier.endian != ELF_LITTLE_ENDIAN) {
-        log("Unsupported byte order");
+        log("Unsupported byte order\n");
         return 0;
     }
 
     if(header->machine != ELF_MACHINE_386) {
-        log("Unsupported instruction set architecture (Only i386:x86-64 is supported)");
+        log("Unsupported instruction set architecture (Only i386:x86-64 is supported)\n");
         return 0;
     }
 
     if(header->version != ELF_VERSION) {
-        log("Unsupported ELF version");
+        log("Unsupported ELF version\n");
         return 0;
     }
 
     if(header->type != ELF_EXECUTABLE) {
-        log("Unsupported ELF file type (Only executables are supported)");
+        log("Unsupported ELF file type (Only executables are supported)\n");
         return 0;
     }
 
     if(header->program_header_offset == 0 || header->program_header_entry_count <= 0) {
-        log("No program headers?");
+        log("No program headers?\n");
         return 0;
     }
 
