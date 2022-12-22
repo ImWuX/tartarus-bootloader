@@ -4,10 +4,10 @@
 #include <log.h>
 #include <boot/memap.h>
 
-elf64_addr_t elf_read_file(file_descriptor_t *file_descriptor) {
+elf64_addr_t elf_read_file(uint32_t cluster_num) {
     void *elf_buffer = pmm_request_page();
 
-    if(fread(file_descriptor, sizeof(elf64_header_t), elf_buffer)) return 0;
+    if(fat32_read(cluster_num, 0, sizeof(elf64_header_t), elf_buffer)) return 0;
     elf64_header_t *header = (elf64_header_t *) elf_buffer;
     elf_buffer += sizeof(elf64_header_t);
 
@@ -53,8 +53,7 @@ elf64_addr_t elf_read_file(file_descriptor_t *file_descriptor) {
 
     elf64_addr_t base_address = UINT64_MAX;
     for(int i = 0; i < header->program_header_entry_count; i++) {
-        if(fseekto(file_descriptor, header->program_header_offset + header->program_header_entry_size * i)) return 0;
-        if(fread(file_descriptor, header->program_header_entry_size, elf_buffer)) return 0;
+        if(fat32_read(cluster_num, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, elf_buffer)) return 0;
         elf64_program_header_t *pheader = (elf64_program_header_t *) elf_buffer;
 
         if(pheader->vaddr < base_address) base_address = pheader->vaddr;
@@ -62,8 +61,7 @@ elf64_addr_t elf_read_file(file_descriptor_t *file_descriptor) {
 
     elf64_xword_t size = 0;
     for(int i = 0; i < header->program_header_entry_count; i++) {
-        if(fseekto(file_descriptor, header->program_header_offset + header->program_header_entry_size * i)) return 0;
-        if(fread(file_descriptor, header->program_header_entry_size, elf_buffer)) return 0;
+        if(fat32_read(cluster_num, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, elf_buffer)) return 0;
         elf64_program_header_t *pheader = (elf64_program_header_t *) elf_buffer;
 
         elf64_xword_t s = pheader->vaddr - base_address + pheader->memsz;
@@ -77,15 +75,13 @@ elf64_addr_t elf_read_file(file_descriptor_t *file_descriptor) {
     }
 
     for(int i = 0; i < header->program_header_entry_count; i++) {
-        if(fseekto(file_descriptor, header->program_header_offset + header->program_header_entry_size * i)) return 0;
-        if(fread(file_descriptor, header->program_header_entry_size, elf_buffer)) return 0;
+        if(fat32_read(cluster_num, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, elf_buffer)) return 0;
         elf64_program_header_t *pheader = (elf64_program_header_t *) elf_buffer;
 
         void *addr = phys_address + (pheader->vaddr - base_address);
         pmm_set(0, addr, pheader->memsz);
 
-        if(fseekto(file_descriptor, pheader->offset)) return 0;
-        if(fread(file_descriptor, pheader->filesz, addr)) return 0;
+        if(fat32_read(cluster_num, pheader->offset, pheader->filesz, addr)) return 0;
     }
 
     return header->entry;

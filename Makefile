@@ -26,6 +26,7 @@ build/bootloader.bin: ${ASM_SOURCES:.asm=.o} ${C_SOURCES:.c=.o}
 
 %.o: %.c
 	${CC} ${CFLAGS} -Isrc -I../nestos/libs -c $< -o $@
+#TODO: Libs like this bad bad bad
 
 # Clean Targets
 clean:

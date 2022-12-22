@@ -190,6 +190,6 @@ typedef struct {
     elf64_sword_t addend;
 } __attribute__((packed)) elf64_rela_t;
 
-elf64_addr_t elf_read_file(file_descriptor_t *file_descriptor);
+elf64_addr_t elf_read_file(uint32_t cluster_num);
 
 #endif

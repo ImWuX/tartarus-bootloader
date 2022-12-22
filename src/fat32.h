@@ -65,22 +65,13 @@ typedef struct {
 } __attribute__((packed)) fat_directory_entry_long_t;
 
 typedef struct {
-    uint8_t name[11];
     uint32_t cluster_num;
     uint32_t file_size;
     uint64_t seek_offset;
 } file_descriptor_t;
 
-typedef struct dir_entry {
-    file_descriptor_t fd;
-    struct dir_entry *last_entry;
-} dir_entry_t;
-
 void fat32_initialize();
-dir_entry_t *read_directory(uint32_t cluster_num);
-dir_entry_t *read_root_directory();
-bool fread(file_descriptor_t *file_descriptor, uint64_t count, void *dest);
-bool fseekto(file_descriptor_t *file_descriptor, uint64_t offset);
-bool fseek(file_descriptor_t *file_descriptor, int64_t count);
+uint32_t fat32_root_find(uint8_t *name);
+bool fat32_read(uint32_t cluster_num, uint64_t seek, uint64_t count, void *dest);
 
 #endif
