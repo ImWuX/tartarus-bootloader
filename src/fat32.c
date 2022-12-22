@@ -13,15 +13,16 @@
 
 static bios_param_block_ext_t *g_bpb;
 static void *g_cluster_buffer;
+static void *g_fat_buffer;
 
 static uint32_t next_cluster(uint32_t cluster_num) {
     static uint64_t last_sector = 0;
     uint64_t sector = g_bpb->bios_param_block.reserved_sector_count + cluster_num / ENTRY_CONST;
     if(sector != last_sector) {
-        disk_read(sector, 1, g_cluster_buffer);
+        disk_read(sector, 1, g_fat_buffer);
         last_sector = sector;
     }
-    return (((uint32_t *) g_cluster_buffer)[cluster_num % ENTRY_CONST] & 0x0FFFFFFF);
+    return (((uint32_t *) g_fat_buffer)[cluster_num % ENTRY_CONST] & 0x0FFFFFFF);
 }
 
 static void read_cluster_to_buffer(uint32_t cluster_num) {
@@ -85,6 +86,7 @@ void fat32_initialize() {
         return;
     }
 
+    g_fat_buffer = pmm_request_page();
     g_bpb = (bios_param_block_ext_t *) bpb_page;
     uint32_t pages_per_cluster = g_bpb->bios_param_block.sectors_per_cluster / 8 + (g_bpb->bios_param_block.sectors_per_cluster % 8 > 0 ? 1 : 0);
     g_cluster_buffer = pmm_request_linear_pages(pages_per_cluster);
