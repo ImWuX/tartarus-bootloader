@@ -11,8 +11,7 @@ kernel.elf: kernel.o
 	${LD} ${LDFLAGS} -o $@ -T"link.ld" $^
 
 %.o: %.c
-	${CC} ${CFLAGS} -I../../nestos/libs -c $< -o $@
-#TODO: Libs like this bad bad bad
+	${CC} ${CFLAGS} -I../shared -c $< -o $@
 
 clean:
 	rm -f $(shell find . -type f -name '*.o')

@@ -24,12 +24,12 @@ static uint8_t pt_get_flag(uint64_t entry, pt_entry_flags_t flag) {
     return (entry & bitSelector) > 0;
 }
 
-void vmm_initialize(boot_memap_entry_t *memory_map, uint16_t memory_map_length) {
+void vmm_initialize(tartarus_memap_entry_t *memory_map, uint16_t memory_map_length) {
     g_pml4 = (page_table_t *) pmm_request_page();
     pmm_set(0, (uint8_t *) g_pml4, 0x1000);
 
     for(uint16_t i = 0; i < memory_map_length; i++) {
-        if(memory_map[i].type == BOOT_MEMAP_TYPE_BAD) continue;
+        if(memory_map[i].type == TARTARUS_MEMAP_TYPE_BAD) continue;
         uint64_t address = memory_map[i].base_address;
         address &= 0xFFFFFFFFFFFFF000;
         while(address < memory_map[i].base_address + memory_map[i].length) {

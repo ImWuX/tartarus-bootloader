@@ -10,7 +10,7 @@
 
 extern uint8_t ld_bootloader_end[];
 
-boot_memap_entry_t *g_memap;
+tartarus_memap_entry_t *g_memap;
 uint16_t g_memap_length;
 
 // TODO: This is prob kinda wack
@@ -19,14 +19,14 @@ static uint64_t align_page_up(uint64_t unaligned_address) {
 }
 
 // TODO: Possibly rewrite this function as I redid the other algo
-static bool memap_claim(uint64_t base, uint64_t length, boot_memap_entry_type_t type) {
+static bool memap_claim(uint64_t base, uint64_t length, tartarus_memap_entry_type_t type) {
     for(uint16_t i = 0; i < g_memap_length; i++) {
         if(g_memap[i].base_address + g_memap[i].length <= base) continue;
-        if(g_memap[i].type != BOOT_MEMAP_TYPE_USABLE) return true;
+        if(g_memap[i].type != TARTARUS_MEMAP_TYPE_USABLE) return true;
         if(g_memap[i].base_address > base) return true;
         uint64_t original_base = g_memap[i].base_address;
         uint64_t original_length = g_memap[i].length;
-        boot_memap_entry_type_t original_type = g_memap[i].type;
+        tartarus_memap_entry_type_t original_type = g_memap[i].type;
         if(g_memap[i].base_address != base) {
             g_memap_length++;
             for(uint16_t j = g_memap_length - 1; j > i; j--) g_memap[j] = g_memap[j - 1];
@@ -68,27 +68,27 @@ void pmm_initialize() {
     uint16_t e820_length = *(uint16_t *) E820_ADDRESS;
     e820_entry_t *e820 = (e820_entry_t *) (E820_ADDRESS + 2);
 
-    g_memap = (boot_memap_entry_t *) ld_bootloader_end;
+    g_memap = (tartarus_memap_entry_t *) ld_bootloader_end;
     g_memap_length = 0;
     for(uint16_t i = 0; i < e820_length; i++) {
-        boot_memap_entry_t entry;
+        tartarus_memap_entry_t entry;
         entry.base_address = e820[i].address;
         entry.length = e820[i].length;
         switch(e820[i].type) {
             case E820_TYPE_USABLE:
-                entry.type = BOOT_MEMAP_TYPE_USABLE;
+                entry.type = TARTARUS_MEMAP_TYPE_USABLE;
                 break;
             case E820_TYPE_BAD:
-                entry.type = BOOT_MEMAP_TYPE_BAD;
+                entry.type = TARTARUS_MEMAP_TYPE_BAD;
                 break;
             case E820_TYPE_ACPI_RECLAIMABLE:
-                entry.type = BOOT_MEMAP_TYPE_ACPI_RECLAIMABLE;
+                entry.type = TARTARUS_MEMAP_TYPE_ACPI_RECLAIMABLE;
                 break;
             case E820_TYPE_ACPI_NVS:
-                entry.type = BOOT_MEMAP_TYPE_ACPI_NVS;
+                entry.type = TARTARUS_MEMAP_TYPE_ACPI_NVS;
                 break;
             default:
-                entry.type = BOOT_MEMAP_TYPE_RESERVED;
+                entry.type = TARTARUS_MEMAP_TYPE_RESERVED;
                 break;
         }
 
@@ -98,7 +98,7 @@ void pmm_initialize() {
             entry.base_address = LOWEST_MEMORY_BOUNDARY;
         }
 
-        if((entry.type == BOOT_MEMAP_TYPE_USABLE || entry.type == BOOT_MEMAP_TYPE_BOOT_RECLAIMABLE)) {
+        if((entry.type == TARTARUS_MEMAP_TYPE_USABLE || entry.type == TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE)) {
             if(entry.base_address % PAGE_SIZE != 0) {
                 uint64_t offset = PAGE_SIZE - entry.base_address % PAGE_SIZE;
                 entry.base_address += offset;
@@ -116,13 +116,13 @@ void pmm_initialize() {
     }
 
     for(uint16_t i = 0; i < g_memap_length; i++) {
-        boot_memap_entry_t *entry = g_memap + i;
+        tartarus_memap_entry_t *entry = g_memap + i;
         if(entry->length == 0) continue;
         uint64_t entry_end = entry->base_address + entry->length;
 
         for(uint16_t j = 0; j < g_memap_length; j++) {
             if(i == j) continue;
-            boot_memap_entry_t *ot_entry = g_memap + j;
+            tartarus_memap_entry_t *ot_entry = g_memap + j;
             if(ot_entry->length == 0) continue;
             uint64_t ot_entry_end = ot_entry->base_address + ot_entry->length;
 
@@ -166,19 +166,19 @@ void pmm_initialize() {
         for(uint16_t j = i; j < g_memap_length; j++) {
             if(g_memap[smallest].base_address > g_memap[j].base_address) smallest = j;
         }
-        boot_memap_entry_t temp = g_memap[i];
+        tartarus_memap_entry_t temp = g_memap[i];
         g_memap[i] = g_memap[smallest];
         g_memap[smallest] = temp;
     }
 
-    memap_claim(BOOTSECTOR_BASE, align_page_up((uint32_t) (&g_memap + MAX_MEMAP_ENTRIES * sizeof(boot_memap_entry_t)) - BOOTSECTOR_BASE), BOOT_MEMAP_TYPE_BOOT_RECLAIMABLE);
+    memap_claim(BOOTSECTOR_BASE, align_page_up((uint32_t) (&g_memap + MAX_MEMAP_ENTRIES * sizeof(tartarus_memap_entry_t)) - BOOTSECTOR_BASE), TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE);
 }
 
-void *pmm_request_linear_pages_type(uint64_t number_of_pages, boot_memap_entry_type_t type) {
+void *pmm_request_linear_pages_type(uint64_t number_of_pages, tartarus_memap_entry_type_t type) {
     uint64_t size = number_of_pages * PAGE_SIZE;
     for(uint16_t i = 0; i < g_memap_length; i++) {
-        boot_memap_entry_t entry = g_memap[i];
-        if(entry.type != BOOT_MEMAP_TYPE_USABLE) continue;
+        tartarus_memap_entry_t entry = g_memap[i];
+        if(entry.type != TARTARUS_MEMAP_TYPE_USABLE) continue;
         if(entry.length < size) continue;
         if(entry.base_address >= UINT32_MAX) continue;
         if(memap_claim(entry.base_address, size, type)) continue;
@@ -189,7 +189,7 @@ void *pmm_request_linear_pages_type(uint64_t number_of_pages, boot_memap_entry_t
 }
 
 void *pmm_request_linear_pages(uint64_t number_of_pages) {
-    return pmm_request_linear_pages_type(number_of_pages, BOOT_MEMAP_TYPE_BOOT_RECLAIMABLE);
+    return pmm_request_linear_pages_type(number_of_pages, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE);
 }
 
 void *pmm_request_page() {

@@ -2,7 +2,7 @@
 #define VMM_H
 
 #include <stdint.h>
-#include <boot/memap.h>
+#include <tartarus.h>
 
 #define HHDM_OFFSET 0xFFFF800000000000
 
@@ -19,7 +19,7 @@ typedef enum {
     PT_FLAG_ACCESSED
 } pt_entry_flags_t;
 
-void vmm_initialize(boot_memap_entry_t *memory_map, uint16_t memory_map_length);
+void vmm_initialize(tartarus_memap_entry_t *memory_map, uint16_t memory_map_length);
 void vmm_map_memory(uint64_t physical_address, uint64_t virtual_address);
 void vmm_map_memory_2mb(uint64_t physical_address, uint64_t virtual_address);
 

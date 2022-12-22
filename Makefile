@@ -25,8 +25,7 @@ build/bootloader.bin: ${ASM_SOURCES:.asm=.o} ${C_SOURCES:.c=.o}
 	${ASMC} -isrc $< -f elf32 -o $@
 
 %.o: %.c
-	${CC} ${CFLAGS} -Isrc -I../nestos/libs -c $< -o $@
-#TODO: Libs like this bad bad bad
+	${CC} ${CFLAGS} -Isrc -Ishared -c $< -o $@
 
 # Clean Targets
 clean:

@@ -2,7 +2,7 @@
 #include <vmm.h>
 #include <pmm.h>
 #include <log.h>
-#include <boot/memap.h>
+#include <tartarus.h>
 
 elf64_addr_t elf_read_file(uint32_t cluster_num) {
     void *elf_buffer = pmm_request_page();
@@ -69,7 +69,7 @@ elf64_addr_t elf_read_file(uint32_t cluster_num) {
     }
 
     uint64_t page_count = size / 0x1000 + (size % 0x1000 > 0 ? 1 : 0);
-    void *phys_address = pmm_request_linear_pages_type(page_count, BOOT_MEMAP_TYPE_KERNEL);
+    void *phys_address = pmm_request_linear_pages_type(page_count, TARTARUS_MEMAP_TYPE_KERNEL);
     for(uint64_t i = 0; i < page_count; i++) {
         vmm_map_memory((uint64_t) (uint32_t) phys_address + i * 0x1000, base_address + i * 0x1000);
     }
