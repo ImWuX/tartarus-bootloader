@@ -6,6 +6,19 @@
 
 #define MEMORY_MODEL_RGB 6
 #define LINEAR_FRAMEBUFFER (1 << 7)
+#define USE_LFB (1 << 14)
+
+static void set_video_mode(uint16_t mode) {
+    int_regs_t regs;
+    pmm_set(0, &regs, sizeof(int_regs_t));
+    regs.eax = 0x4F02;
+    regs.ebx = mode | USE_LFB;
+    int_exec(0x10, &regs);
+    if(regs.eax != 0x4F) {
+        log_panic("Setting VESA mode failed");
+        __builtin_unreachable();
+    }
+}
 
 void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_bpp) {
     void *info_buffer = pmm_request_page();
@@ -21,7 +34,7 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
     regs.edi = int_16bit_offset(info_buffer);
     int_exec(0x10, &regs);
     if(regs.eax != 0x4F) {
-        log_panic("Loading VBE 2.0 Info Failed");
+        log_panic("Loading VBE 2.0 info failed");
         __builtin_unreachable();
     }
     vesa_vbe_info_t *vbe_info = (vesa_vbe_info_t *) info_buffer;
@@ -38,6 +51,10 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         regs.es = int_16bit_segment((uint32_t) info_buffer + 512);
         regs.edi = int_16bit_offset((uint32_t) info_buffer + 512);
         int_exec(0x10, &regs);
+        if(regs.eax != 0x4F) {
+            log_panic("Loading VBE mode info failed");
+            __builtin_unreachable();
+        }
 
         modes++;
 
@@ -57,6 +74,8 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         log_panic("Could not find an appropriate display mode");
         __builtin_unreachable();
     }
+
+    set_video_mode(closest_mode);
 
     pmm_set(0, &regs, sizeof(int_regs_t));
     regs.eax = 0x4F01;
