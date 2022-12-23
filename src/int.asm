@@ -1,4 +1,11 @@
 bits 32
+
+CODE_SEGMENT equ 0x8
+DATA_SEGMENT equ 0x10
+
+extern gdt_set_real
+extern gdt_set_protected
+
 global int_exec
 int_exec:
     mov al, byte [esp + 4]

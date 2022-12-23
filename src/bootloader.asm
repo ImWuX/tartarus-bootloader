@@ -99,7 +99,6 @@ kernel_params:  db 0
                 dw 0
                 dq 0
 
-%include "includes/int.inc"
 %include "includes/gdt.inc"
 %include "includes/a20.inc"
 %include "includes/print.inc"
