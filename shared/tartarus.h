@@ -17,12 +17,12 @@ typedef struct {
     uint64_t base_address;
     uint64_t length;
     tartarus_memap_entry_type_t type;
-} tartarus_memap_entry_t;
+} __attribute__((packed)) tartarus_memap_entry_t;
 
 typedef struct {
     uint8_t boot_drive;
     tartarus_memap_entry_t *memory_map;
-    uint64_t memory_map_length;
+    uint16_t memory_map_length;
     uint64_t vbe_mode_info_address;
 } __attribute__((packed)) tartarus_parameters_t;
 

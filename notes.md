@@ -16,6 +16,7 @@ Bootloader:
 - At some point possibly implementing UEFI
 - Fat32 doesnt actually check for invalid clusters, it probably should just incase
 - CHS disk reading
+- Pass HHDM address to kernel
 
 # Bugs
 - Bootloader only supports 512byte sectors, technically fat32 supports other sizes.
