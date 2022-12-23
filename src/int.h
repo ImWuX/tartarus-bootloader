@@ -3,8 +3,9 @@
 
 #include <stdint.h>
 
-#define int_16bit_segment(x) ((uint16_t)(((int)x & 0xffff0) >> 4))
-#define int_16bit_offset(x) ((uint16_t)(((int)x & 0x0000f) >> 0))
+#define int_16bit_segment(value) ((uint16_t)(((uint32_t)(value) & 0xffff0) >> 4))
+#define int_16bit_offset(value) ((uint16_t)(((uint32_t)(value) & 0x0000f) >> 0))
+#define int_16bit_desegment(segment, offset) (((uint32_t)(segment) << 4) + (uint32_t)(offset))
 
 #define INT_REGS_EFLAGS_CF (1 << 0)
 #define INT_REGS_EFLAGS_ZF (1 << 6)

@@ -25,12 +25,6 @@ SECTIONS
         *(COMMON)
     }
 
-    ld_vbe_info = .;
-    . += 512;
-
-    ld_vbe_mode_info = .;
-    . += 256;
-
     ld_bootloader_end = .;
 
     /DISCARD/ : {

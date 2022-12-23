@@ -5,10 +5,19 @@
 #include <disk.h>
 #include <fat32.h>
 #include <elf.h>
+#include <vesa.h>
 
 #define KERNEL_FILE "KERNEL  SYS"
 
-uint64_t load() {
+typedef struct {
+    uint64_t entry;
+    uint8_t boot_drive;
+    uint64_t memory_map;
+    uint16_t memory_map_length;
+    uint64_t framebuffer;
+} __attribute__((packed)) tartarus_internal_params_t;
+
+tartarus_internal_params_t *load() {
     log_clear();
     log("Tartarus | Protected Mode\n");
 
@@ -21,6 +30,15 @@ uint64_t load() {
     vmm_initialize(g_memap, g_memap_length);
     log("Tartarus | Virtual Memory initialized\n");
 
+    tartarus_internal_params_t *params = pmm_request_page();
+    params->boot_drive = disk_drive();
+    params->memory_map = (uint32_t) g_memap;
+    params->memory_map_length = g_memap_length;
+
+    void *framebuffer = vesa_setup(1920, 1080, 32);
+    params->framebuffer = (uint32_t) framebuffer;
+    log("Tartarus | Vesa Initialized\n");
+
     fat32_initialize();
     log("Tartarus | Fat32 Initialized\n");
 
@@ -32,7 +50,8 @@ uint64_t load() {
         log_panic("Failed to load ELF kernel file");
         __builtin_unreachable();
     }
+    params->entry = entry;
     log("Tartarus | Kernel Loaded");
 
-    return entry;
+    return params;
 }

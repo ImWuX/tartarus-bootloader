@@ -20,10 +20,25 @@ typedef struct {
 } __attribute__((packed)) tartarus_memap_entry_t;
 
 typedef struct {
+    uint16_t width;
+    uint16_t height;
+    uint8_t bpp;
+    uint64_t address;
+    uint8_t memory_model;
+    uint16_t pitch;
+    uint8_t mask_red_size;
+    uint8_t mask_red_shift;
+    uint8_t mask_green_size;
+    uint8_t mask_green_shift;
+    uint8_t mask_blue_size;
+    uint8_t mask_blue_shift;
+} __attribute__((packed)) tartarus_framebuffer_t;
+
+typedef struct {
     uint8_t boot_drive;
     tartarus_memap_entry_t *memory_map;
     uint16_t memory_map_length;
-    uint64_t vbe_mode_info_address;
+    tartarus_framebuffer_t *framebuffer;
 } __attribute__((packed)) tartarus_parameters_t;
 
 #endif

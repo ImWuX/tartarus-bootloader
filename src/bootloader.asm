@@ -1,7 +1,4 @@
 extern load
-extern disk_drive
-extern g_memap
-extern g_memap_length
 
 bits 16
 section .entry
@@ -52,12 +49,8 @@ entry_protected:
     mov fs, eax
     mov gs, eax
 
-    call load                                   ; Initialize memroy and load kernel into memory
-    mov dword [kernel_entry + 4], edx           ; Store kernel entry
-    mov dword [kernel_entry], eax
-
-    call disk_drive
-    mov byte [kernel_params], al                ; Store drive number in kernel params
+    call load                                   ; Initialize memory and load kernel into memory
+    mov dword [load_ret], eax                   ; Save entry + params
 
     mov eax, cr4
     or eax, 1 << 5                              ; Enable PAE bit
@@ -84,20 +77,13 @@ entry_long:
     mov fs, rax
     mov gs, rax
 
-    mov eax, dword [g_memap]
-    mov dword [kernel_params + 1], eax          ; Store memap address
-    mov ax, word [g_memap_length]
-    mov word [kernel_params + 9], ax            ; Store memap length
-
     xor rdi, rdi
-    mov edi, kernel_params
-    jmp [kernel_entry]                          ; Load kernel
+    mov edi, dword [load_ret]                   ; Gets the parameter struct
+    mov rax, qword [edi]                        ; Gets the entry address
+    add edi, 8                                  ; Increment to skip the entry address
+    jmp rax                                     ; Load kernel
 
-kernel_entry:   dq 0
-kernel_params:  db 0
-                dq 0
-                dw 0
-                dq 0
+load_ret: dd 0
 
 %include "includes/gdt.inc"
 %include "includes/a20.inc"
