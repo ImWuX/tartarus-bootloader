@@ -75,5 +75,10 @@ noreturn void kmain(tartarus_parameters_t *params) {
     }
     ps("Test Kernel | Read Test Successful\n");
 
+    // uint32_t *buffer = (uint32_t *) params->framebuffer->address;
+    // for(int i = 0; i < 1920; i++) {
+    //     buffer[i] = 0xFFFFFFFF;
+    // }
+
     while(true) asm("hlt");
 }

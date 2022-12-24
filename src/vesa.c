@@ -75,7 +75,7 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         __builtin_unreachable();
     }
 
-    set_video_mode(closest_mode);
+    // set_video_mode(closest_mode);
 
     pmm_set(0, &regs, sizeof(int_regs_t));
     regs.eax = 0x4F01;
