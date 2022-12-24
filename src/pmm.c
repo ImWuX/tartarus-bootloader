@@ -7,6 +7,8 @@
 #define MAX_MEMAP_ENTRIES 255
 #define LOWEST_MEMORY_BOUNDARY 0x1000
 
+#define requires_alignment(type) (type == TARTARUS_MEMAP_TYPE_USABLE || type == TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE || type == TARTARUS_MEMAP_TYPE_FRAMEBUFFER)
+
 extern uint8_t ld_bootloader_end[];
 
 tartarus_memap_entry_t *g_memap;
@@ -77,7 +79,7 @@ static void memap_sanitize() {
     }
 
     for(uint16_t i = 0; i < g_memap_length; i++) {
-        if(g_memap[i].type != TARTARUS_MEMAP_TYPE_USABLE && g_memap[i].type != TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE) continue;
+        if(!requires_alignment(g_memap[i].type)) continue;
         if(g_memap[i].base_address % PAGE_SIZE != 0) {
             uint64_t offset = PAGE_SIZE - g_memap[i].base_address % PAGE_SIZE;
             g_memap[i].base_address += offset;
@@ -105,7 +107,7 @@ bool pmm_memap_claim(uint64_t base, uint64_t length, tartarus_memap_entry_type_t
         __builtin_unreachable();
     }
 
-    if(base % PAGE_SIZE != 0 || length % PAGE_SIZE != 0) return true;
+    if(requires_alignment(type) && (base % PAGE_SIZE != 0 || length % PAGE_SIZE != 0)) return true;
 
     uint64_t end = base + length;
     for(uint16_t i = 0; i < g_memap_length; i++) {

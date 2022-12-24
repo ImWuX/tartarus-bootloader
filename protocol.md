@@ -21,7 +21,9 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
 - All entries are ensured to not be overlapping.
 - All entries are ensured to be ordered.
 - Contigous memory of the same type is ensured to be one entry (No back to back entries of the same type).
-- `USABLE` and `BOOT_RECLAIMABLE` entries are ensured to be:
-    - Page aligned (`0x1000`)
+- Entries of the following types will be paged alined (`0x1000`):
+    - `USABLE`,
+    - `BOOT_RECLAIMABLE`
+    - `FRAMEBUFFER`
 - `BOOT_RECLAIMABLE` entries should only be reclaimed once the kernel is either done with data provided by the bootloader or has moved it.
 - Conflicting entries provided by the bootloader will be resolved by prioritizing ACPI entries over usable, reserved over ACPI, and bad over reserved.
