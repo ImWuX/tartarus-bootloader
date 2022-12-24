@@ -1,3 +1,4 @@
+#include "font.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdnoreturn.h>
@@ -6,7 +7,9 @@
 #define HHDM 0xFFFF800000000000
 
 static int x = 0;
-static int y = 8;
+static int y = 0;
+static uint32_t *buf;
+static uint16_t pitch;
 
 static void putchar(char c) {
     switch(c) {
@@ -15,9 +18,18 @@ static void putchar(char c) {
             y++;
             break;
         default:
-            uint8_t *buf = (uint8_t *) 0xB8000;
-            buf[y * 160 + x * 2] = c;
-            buf[y * 160 + x * 2 + 1] = 0x0A;
+            uint8_t *font_char = &font[c * 16];
+            int offset = x * FONT_WIDTH + y * FONT_HEIGHT * pitch;
+            for(int xx = 0; xx < FONT_HEIGHT; xx++) {
+                for(int yy = 0; yy < FONT_WIDTH; yy++) {
+                    if(font_char[xx] & (1 << (FONT_WIDTH - yy))){
+                        buf[offset + yy] = 0xFFFFFFFF;
+                    } else {
+                        buf[offset + yy] = 0;
+                    }
+                }
+                offset += pitch;
+            }
             x++;
             break;
     }
@@ -49,10 +61,13 @@ static void ps(char *str) {
 }
 
 noreturn void kmain(tartarus_parameters_t *params) {
+    buf = (uint32_t *) params->framebuffer->address;
+    pitch = params->framebuffer->pitch / 4;
     ps("Test Kernel | Initialized\n");
     ps("Test Kernel | Printing Tartarus Memap\n");
     for(uint16_t i = 0; i < params->memory_map_length; i++) {
-        ps("T[");
+        pn((uint64_t) i);
+        ps(" >> T[");
         pn((uint64_t) params->memory_map[i].type);
         ps("] B[");
         pn((uint64_t) params->memory_map[i].base_address);
@@ -73,12 +88,7 @@ noreturn void kmain(tartarus_parameters_t *params) {
             read_test = *((uint8_t *) (HHDM + params->memory_map[i].base_address + params->memory_map[i].length / 2));
         }
     }
-    ps("Test Kernel | Read Test Successful\n");
-
-    // uint32_t *buffer = (uint32_t *) params->framebuffer->address;
-    // for(int i = 0; i < 1920; i++) {
-    //     buffer[i] = 0xFFFFFFFF;
-    // }
+    ps("Test Kernel | Test Successful\n");
 
     while(true) asm("hlt");
 }

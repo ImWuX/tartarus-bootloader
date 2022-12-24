@@ -33,7 +33,6 @@ tartarus_internal_params_t *load() {
     tartarus_internal_params_t *params = pmm_request_page();
     params->boot_drive = disk_drive();
     params->memory_map = (uint32_t) g_memap;
-    params->memory_map_length = g_memap_length;
 
     void *framebuffer = vesa_setup(1920, 1080, 32);
     params->framebuffer = (uint32_t) framebuffer;
@@ -52,6 +51,8 @@ tartarus_internal_params_t *load() {
     }
     params->entry = entry;
     log("Tartarus | Kernel Loaded");
+
+    params->memory_map_length = g_memap_length;
 
     return params;
 }

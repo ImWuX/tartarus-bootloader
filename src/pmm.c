@@ -107,8 +107,6 @@ bool pmm_memap_claim(uint64_t base, uint64_t length, tartarus_memap_entry_type_t
         __builtin_unreachable();
     }
 
-    if(requires_alignment(type) && (base % PAGE_SIZE != 0 || length % PAGE_SIZE != 0)) return true;
-
     uint64_t end = base + length;
     for(uint16_t i = 0; i < g_memap_length; i++) {
         tartarus_memap_entry_t entry = g_memap[i];

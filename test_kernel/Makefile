@@ -7,7 +7,7 @@ CFLAGS = -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2
 
 all: kernel.elf clean
 
-kernel.elf: kernel.o
+kernel.elf: kernel.o font.o
 	${LD} ${LDFLAGS} -o $@ -T"link.ld" $^
 
 %.o: %.c

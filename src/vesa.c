@@ -1,6 +1,7 @@
 #include "vesa.h"
 #include <tartarus.h>
 #include <pmm.h>
+#include <vmm.h>
 #include <int.h>
 #include <log.h>
 
@@ -75,7 +76,7 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         __builtin_unreachable();
     }
 
-    // set_video_mode(closest_mode);
+    set_video_mode(closest_mode);
 
     pmm_set(0, &regs, sizeof(int_regs_t));
     regs.eax = 0x4F01;
@@ -108,5 +109,16 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         tartarus_framebuffer->mask_blue_size = mode_info->linear_blue_mask_size;
         tartarus_framebuffer->mask_blue_shift = mode_info->linear_blue_mask_position;
     }
+
+    uint64_t framebuffer_length = (uint64_t) tartarus_framebuffer->height * (uint64_t) tartarus_framebuffer->pitch;
+    if(pmm_memap_claim(tartarus_framebuffer->address, framebuffer_length, TARTARUS_MEMAP_TYPE_FRAMEBUFFER)) {
+        log_panic("Failed to reserve framebuffer memory");
+        __builtin_unreachable();
+    }
+    for(uint64_t address = tartarus_framebuffer->address & ~((uint64_t) 0xFFF); address < tartarus_framebuffer->address + framebuffer_length; address += 0x1000) {
+        vmm_map_memory(address, address);
+        vmm_map_memory(address, HHDM_OFFSET + address);
+    }
+
     return tartarus_framebuffer;
 }

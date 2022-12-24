@@ -31,7 +31,7 @@ void vmm_initialize(tartarus_memap_entry_t *memory_map, uint16_t memory_map_leng
     for(uint16_t i = 0; i < memory_map_length; i++) {
         if(memory_map[i].type == TARTARUS_MEMAP_TYPE_BAD) continue;
         uint64_t address = memory_map[i].base_address;
-        address &= 0xFFFFFFFFFFFFF000;
+        address &= ~((uint64_t) 0xFFF);
         while(address < memory_map[i].base_address + memory_map[i].length) {
             if(address % 0x200000 == 0 && address + 0x200000 < memory_map[i].base_address + memory_map[i].length) {
                 vmm_map_memory_2mb(address, address);
@@ -44,8 +44,6 @@ void vmm_initialize(tartarus_memap_entry_t *memory_map, uint16_t memory_map_leng
             }
         }
     }
-
-    vmm_map_memory_2mb(0xB8000, 0xB8000); //TODO: REmove
 
     asm volatile("mov %0, %%cr3" : : "r" (g_pml4));
 }
