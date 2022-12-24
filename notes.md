@@ -5,7 +5,7 @@
 
 # Assumptions Made
 Bootloader:
-- Assumes that there is conventional memory at 0x8000 up for the bootloader memory map
+- Assumes that there is conventional memory at 0x7C00^ for the bootloader and its memory map
 - Assumes that there is conventional memory at 0x500 for the bios memory map
 
 # Todo
