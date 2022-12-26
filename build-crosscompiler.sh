@@ -1,3 +1,5 @@
+#!/bin/bash
+
 export TARGET="i386-elf"
 export PREFIX="/usr/local/i386elfgcc"
 export PATH="$PREFIX/bin:$PATH"

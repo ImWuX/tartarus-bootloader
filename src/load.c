@@ -15,6 +15,7 @@ typedef struct {
     uint64_t memory_map;
     uint16_t memory_map_length;
     uint64_t framebuffer;
+    uint64_t hhdm_address;
 } __attribute__((packed)) tartarus_internal_params_t;
 
 tartarus_internal_params_t *load() {
@@ -33,6 +34,7 @@ tartarus_internal_params_t *load() {
     tartarus_internal_params_t *params = pmm_request_page();
     params->boot_drive = disk_drive();
     params->memory_map = (uint32_t) g_memap;
+    params->hhdm_address = HHDM_OFFSET;
 
     void *framebuffer = vesa_setup(1920, 1080, 32);
     params->framebuffer = (uint32_t) framebuffer;
