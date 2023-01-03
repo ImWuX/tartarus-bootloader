@@ -1,4 +1,7 @@
 extern load
+extern pmm_request_linear_pages
+
+PAGE_SIZE equ 0x1000
 
 bits 16
 section .entry
@@ -51,6 +54,14 @@ entry_protected:
 
     call load                                   ; Initialize memory and load kernel into memory
     mov dword [load_ret], eax                   ; Save entry + params
+
+    push dword 0
+    push dword 16
+    call pmm_request_linear_pages
+    add esp, 8
+    add eax, 16 * PAGE_SIZE
+    mov ebp, eax
+    mov esp, ebp
 
     mov eax, cr4
     or eax, 1 << 5                              ; Enable PAE bit

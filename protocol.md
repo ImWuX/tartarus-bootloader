@@ -3,12 +3,13 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
 
 # Kernel Requirements
 - Supports x86_64
-- Kernel elf has to start at or above `0xFFFF FFFF 8000 0000`
+- Kernel elf should start at or above `0xFFFF FFFF 8000 0000`
 
 # State Immediately After Bootloader Exit
 **Anything not listed here should not be assumed to be true or false.**
 - A20 line is opened
 - CPU is set to long mode
+- Stack is set to some area of 64KiB of contigous bootloader reclaimable memory
 
 ## The Virtual Memory Map
 - All non `BAD` memory entries will be mapped starting at
@@ -17,13 +18,13 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
 - Kernel is mapped according to the ELF file
 
 ## The Physical Memory Map
-- Anything under `0x1000` will always be `RESERVED`.
-- All entries are ensured to not be overlapping.
-- All entries are ensured to be ordered.
-- Contigous memory of the same type is ensured to be one entry (No back to back entries of the same type).
+- Anything under `0x1000` will never be included in an entry
+- All entries are ensured to not be overlapping
+- All entries are ensured to be ordered
+- Contigous memory of the same type is ensured to be one entry (No back to back entries of the same type)
 - Entries of the following types will be paged alined (`0x1000`):
-    - `USABLE`,
+    - `USABLE`
     - `BOOT_RECLAIMABLE`
     - `FRAMEBUFFER`
-- `BOOT_RECLAIMABLE` entries should only be reclaimed once the kernel is either done with data provided by the bootloader or has moved it.
-- Conflicting entries provided by the bootloader will be resolved by prioritizing ACPI entries over usable, reserved over ACPI, and bad over reserved.
+- `BOOT_RECLAIMABLE` entries should only be reclaimed once the kernel is either done with data provided by the bootloader or has moved it
+- Conflicting entries provided by the bootloader will be resolved by prioritizing ACPI entries over usable, reserved over ACPI, and bad over reserved
