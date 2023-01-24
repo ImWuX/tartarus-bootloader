@@ -1,5 +1,4 @@
 extern load
-extern pmm_request_linear_pages
 
 PAGE_SIZE equ 0x1000
 
@@ -55,12 +54,8 @@ entry_protected:
     call load                                   ; Initialize memory and load kernel into memory
     mov dword [load_ret], eax                   ; Save entry + params
 
-    push dword 0
-    push dword 16
-    call pmm_request_linear_pages
-    add esp, 8
-    add eax, 16 * PAGE_SIZE
-    mov ebp, eax
+    mov edi, [load_ret]
+    mov ebp, [edi + 8]
     mov esp, ebp
 
     mov eax, cr4
@@ -91,7 +86,7 @@ entry_long:
     xor rdi, rdi
     mov edi, dword [load_ret]                   ; Gets the parameter struct
     mov rax, qword [edi]                        ; Gets the entry address
-    add edi, 8                                  ; Increment to skip the entry address
+    add edi, 16                                 ; Increment to skip the entry address
     jmp rax                                     ; Load kernel
 
 load_ret: dd 0

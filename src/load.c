@@ -11,6 +11,7 @@
 
 typedef struct {
     uint64_t entry;
+    uint64_t stack_address;
     uint8_t boot_drive;
     uint64_t memory_map;
     uint16_t memory_map_length;
@@ -53,6 +54,8 @@ tartarus_internal_params_t *load() {
     }
     params->entry = entry;
     log("Tartarus | Kernel Loaded");
+
+    params->stack_address = (uint64_t) (uint32_t) pmm_request_linear_pages(16) + 16 * 0x1000;
 
     params->memory_map_length = g_memap_length;
 
