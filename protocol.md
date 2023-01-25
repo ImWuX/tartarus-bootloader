@@ -10,7 +10,7 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
 - A20 line is opened
 - CPU is set to long mode
 - Stack is set to some area of 64KiB of contigous bootloader reclaimable memory
-- GDT is assured to be loaded in bootloader reclaimable memory with the following entries:
+- GDT is assured to be loaded in bootloader reclaimable memory with at least the following entries:
     - 0x0:  NULL
     - 0x8:  64bit CODE ring0 readable
     - 0x10: 64ibt DATA ring0 writable
