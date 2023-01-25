@@ -35,13 +35,13 @@ gdt_set_protected:
 bits 32
 global gdt_set_real
 gdt_set_real:
-    mov [gdt.code + 6], byte 00001111b
-    mov [gdt.data + 6], byte 00001111b
+    mov [gdt.code + 6], byte 00000000b
+    mov [gdt.data + 6], byte 00000000b
     ret
 
 gdt_set_long:
     mov [gdt.code], word 0
     mov [gdt.data], word 0
-    mov [gdt.code + 6], byte 10100000b
-    mov [gdt.data + 6], byte 10100000b
+    mov [gdt.code + 6], byte 00100000b
+    mov [gdt.data + 6], byte 00000000b
     ret
