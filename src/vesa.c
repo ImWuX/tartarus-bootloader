@@ -34,7 +34,7 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
     regs.es = int_16bit_segment(info_buffer);
     regs.edi = int_16bit_offset(info_buffer);
     int_exec(0x10, &regs);
-    if(regs.eax != 0x4F) {
+    if((regs.eax & 0xFFFF) != 0x4F) {
         log_panic("Loading VBE 2.0 info failed");
         __builtin_unreachable();
     }
@@ -52,7 +52,7 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         regs.es = int_16bit_segment((uint32_t) info_buffer + 512);
         regs.edi = int_16bit_offset((uint32_t) info_buffer + 512);
         int_exec(0x10, &regs);
-        if(regs.eax != 0x4F) {
+        if((regs.eax & 0xFFFF) != 0x4F) {
             log_panic("Loading VBE mode info failed");
             __builtin_unreachable();
         }
