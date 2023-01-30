@@ -16,7 +16,7 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
     - 0x10: 64ibt DATA ring0 writable
 
 ## The Virtual Memory Map
-- All non `BAD` memory entries will be mapped starting at
+- 4GB and all non `BAD` memory entries will be mapped starting at
     - `0x0000 0000 0000 0000` *Identity mapped*
     - `0xFFFF 8000 0000 0000` *Higher Half Direct Memory (HHDM)*
 - Kernel is mapped according to the ELF file

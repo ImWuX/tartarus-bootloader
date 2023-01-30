@@ -1,6 +1,8 @@
 #include "vmm.h"
 #include <pmm.h>
 
+#define MINMAP 0x100000000
+
 static page_table_t *g_pml4;
 
 static void pt_set_address(uint64_t *entry, uint64_t address) {
@@ -28,9 +30,14 @@ void vmm_initialize(tartarus_memap_entry_t *memory_map, uint16_t memory_map_leng
     g_pml4 = (page_table_t *) pmm_request_page();
     pmm_set(0, (uint8_t *) g_pml4, 0x1000);
 
+    for(uint64_t address = 0; address < MINMAP; address += 0x200000) {
+        vmm_map_memory_2mb(address, address);
+        vmm_map_memory_2mb(address, HHDM_OFFSET + address);
+    }
+
     for(uint16_t i = 0; i < memory_map_length; i++) {
         if(memory_map[i].type == TARTARUS_MEMAP_TYPE_BAD) continue;
-        uint64_t address = memory_map[i].base_address;
+        uint64_t address = memory_map[i].base_address < MINMAP ? MINMAP : memory_map[i].base_address;
         address &= ~((uint64_t) 0xFFF);
         while(address < memory_map[i].base_address + memory_map[i].length) {
             if(address % 0x200000 == 0 && address + 0x200000 < memory_map[i].base_address + memory_map[i].length) {

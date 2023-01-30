@@ -115,10 +115,6 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         log_panic("Failed to reserve framebuffer memory");
         __builtin_unreachable();
     }
-    for(uint64_t address = tartarus_framebuffer->address & ~((uint64_t) 0xFFF); address < tartarus_framebuffer->address + framebuffer_length; address += 0x1000) {
-        vmm_map_memory(address, address);
-        vmm_map_memory(address, HHDM_OFFSET + address);
-    }
 
     return tartarus_framebuffer;
 }
