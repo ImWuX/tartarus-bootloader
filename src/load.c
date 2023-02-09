@@ -8,6 +8,7 @@
 #include <vesa.h>
 
 #define KERNEL_FILE "KERNEL  SYS"
+#define CONFIG_FILE "TRTRS   CFG"
 
 typedef struct {
     uint64_t entry;
@@ -24,13 +25,19 @@ tartarus_internal_params_t *load() {
     log("Tartarus | Protected Mode\n");
 
     disk_initialize();
+    log("Tartarus | Disk Initialized\n");
 
     e820_load();
+    log("Tartarus | E820 Map Loaded\n");
+
     pmm_initialize();
     log("Tartarus | Physical Memory Initialized\n");
 
     vmm_initialize(g_memap, g_memap_length);
-    log("Tartarus | Virtual Memory initialized\n");
+    log("Tartarus | Virtual Memory Initialized\n");
+
+    fat32_initialize();
+    log("Tartarus | Fat32 Initialized\n");
 
     tartarus_internal_params_t *params = pmm_request_page();
     params->boot_drive = disk_drive();
@@ -41,11 +48,8 @@ tartarus_internal_params_t *load() {
     params->framebuffer = (uint32_t) framebuffer;
     log("Tartarus | Vesa Initialized\n");
 
-    fat32_initialize();
-    log("Tartarus | Fat32 Initialized\n");
-
     uint32_t kernel_cluster = fat32_root_find((uint8_t *) KERNEL_FILE);
-    log("Tartarus | Found kernel\n");
+    log("Tartarus | Found Kernel\n");
 
     elf64_addr_t entry = elf_read_file(kernel_cluster);
     if(entry == 0) {

@@ -32,3 +32,11 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
     - `FRAMEBUFFER`
 - `BOOT_RECLAIMABLE` entries should only be reclaimed once the kernel is either done with data provided by the bootloader or has moved it
 - Conflicting entries provided by the bootloader will be resolved by prioritizing ACPI entries over usable, reserved over ACPI, and bad over reserved
+
+## VESA Framebuffer
+- The VESA mode will be set to:
+    - Linear
+    - RGB
+    - 32BPP
+
+  if the GPU does not support this framebuffer, it will not load the kernel
