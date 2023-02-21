@@ -52,7 +52,7 @@ bool fat32_read(uint32_t cluster_num, uint64_t seek, uint64_t count, void *dest)
     return false;
 }
 
-uint32_t fat32_root_find(uint8_t *name) {
+bool fat32_root_find(uint8_t *name, fat_file_info *info) {
     uint32_t cluster_num = g_bpb->root_cluster_num;
     while(cluster_num < BAD_CLUSTER) {
         read_cluster_to_buffer(cluster_num);
@@ -71,11 +71,15 @@ uint32_t fat32_root_find(uint8_t *name) {
                 }
             }
 
-            if(match) return (((uint32_t) entry.cluster_high) << 16) + entry.cluster_low;
+            if(match) {
+                info->cluster_number = (((uint32_t) entry.cluster_high) << 16) + entry.cluster_low;
+                info->size = entry.size;
+                return false;
+            }
         }
         cluster_num = next_cluster(cluster_num);
     }
-    return 0;
+    return true;
 }
 
 void fat32_initialize() {
