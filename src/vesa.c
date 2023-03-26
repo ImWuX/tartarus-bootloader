@@ -15,7 +15,7 @@ static void set_video_mode(uint16_t mode) {
     regs.eax = 0x4F02;
     regs.ebx = mode | USE_LFB;
     int_exec(0x10, &regs);
-    if(regs.eax != 0x4F) {
+    if((regs.eax & 0xFFFF) != 0x4F) {
         log_panic("Setting VESA mode failed");
         __builtin_unreachable();
     }
@@ -76,8 +76,6 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         __builtin_unreachable();
     }
 
-    set_video_mode(closest_mode);
-
     pmm_set(0, &regs, sizeof(int_regs_t));
     regs.eax = 0x4F01;
     regs.ecx = closest_mode;
@@ -109,6 +107,8 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
         tartarus_framebuffer->mask_blue_size = mode_info->linear_blue_mask_size;
         tartarus_framebuffer->mask_blue_shift = mode_info->linear_blue_mask_position;
     }
+
+    set_video_mode(closest_mode);
 
     uint64_t framebuffer_length = (uint64_t) tartarus_framebuffer->height * (uint64_t) tartarus_framebuffer->pitch;
     if(pmm_memap_claim(tartarus_framebuffer->address, framebuffer_length, TARTARUS_MEMAP_TYPE_FRAMEBUFFER)) {
