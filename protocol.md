@@ -14,6 +14,13 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
     - 0x0:  NULL
     - 0x8:  64bit CODE ring0 readable
     - 0x10: 64ibt DATA ring0 writable
+- Control Registers
+    - PE is set in `CR0`
+    - PG is set in `CR0`
+    - WP is set in `CR0`
+    - PAE is set in `CR4`
+    - LME is set in `EFER`
+    - NX is set in `EFER` (if supported)
 
 ## The Virtual Memory Map
 - 4GB and all non `BAD` memory entries will be mapped starting at

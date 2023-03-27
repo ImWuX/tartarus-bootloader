@@ -68,7 +68,7 @@ entry_protected:
     wrmsr                                       ; Enable long mode
 
     mov eax, cr0
-    or eax, 1 << 31                             ; Set paging bit
+    or eax, (1 << 31) | (1 << 16)               ; Set paging bit & write protect bits
     mov cr0, eax                                ; Enable paging
 
     call gdt_set_long                           ; Modify GDT to be long mode compatible
@@ -76,6 +76,16 @@ entry_protected:
 
 bits 64
 entry_long:
+    mov eax, 0x80000001
+    cpuid
+    test edx, 1 << 20
+    jz .noxd
+
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, (1 << 11)                           ; Set NX
+    wrmsr
+.noxd:
     mov rax, DATA_SEGMENT                       ; Reset segments just incase
     mov ds, rax
     mov ss, rax
