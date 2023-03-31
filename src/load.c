@@ -7,8 +7,7 @@
 #include <elf.h>
 #include <vesa.h>
 #include <config.h>
-
-#define KERNEL_FILE "KERNEL  SYS"
+#include <acpi.h>
 
 typedef struct {
     uint64_t entry;
@@ -18,6 +17,7 @@ typedef struct {
     uint16_t memory_map_length;
     uint64_t framebuffer;
     uint64_t hhdm_address;
+    uint64_t rsdp;
 } __attribute__((packed)) tartarus_internal_params_t;
 
 tartarus_internal_params_t *load() {
@@ -46,13 +46,19 @@ tartarus_internal_params_t *load() {
     params->boot_drive = disk_drive();
     params->memory_map = (uint32_t) g_memap;
     params->hhdm_address = HHDM_OFFSET;
+    if(config_read_bool("acpi_find_rsdp", false)) {
+        params->rsdp = (uint64_t) acpi_find_rsdp();
+        log("Tartarus | RSDP At: $\n", params->rsdp);
+    }
 
-    void *framebuffer = vesa_setup(config_read_int("vesa_target_width", 1920), config_read_int("vesa_target_height", 1080), 32);
-    params->framebuffer = (uint32_t) framebuffer;
-    log("Tartarus | Vesa Initialized\n");
+    if(config_read_bool("vesa_setup", true)) {
+        void *framebuffer = vesa_setup(config_read_int("vesa_target_width", 1920), config_read_int("vesa_target_height", 1080), 32);
+        params->framebuffer = (uint32_t) framebuffer;
+        log("Tartarus | Vesa Initialized\n");
+    }
 
     fat_file_info kernel_file_info;
-    if(fat32_root_find((uint8_t *) KERNEL_FILE, &kernel_file_info)) log_panic("Could not find the kernel file");
+    if(fat32_root_find((uint8_t *) config_read_string("kernel_filename", "KERN    SYS"), &kernel_file_info)) log_panic("Could not find the kernel file");
     log("Tartarus | Found Kernel\n");
 
     elf64_addr_t entry = elf_read_file(kernel_file_info.cluster_number);

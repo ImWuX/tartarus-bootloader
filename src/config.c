@@ -10,6 +10,8 @@
 
 static char *g_config;
 static int g_config_size;
+static char *g_strings;
+static int g_strings_offset;
 
 static int findkey(char *key) {
     bool match = true;
@@ -62,13 +64,28 @@ int config_read_int(char *key, int fallback) {
     return value;
 }
 
+char *config_read_string(char *key, char *fallback) {
+    int index = findkey(key);
+    if(index < 0) return fallback;
+    int offset = g_strings_offset;
+    while(index < g_config_size && g_config[index] != '\n') {
+        g_strings[g_strings_offset] = g_config[index];
+        g_strings_offset++;
+        index++;
+    }
+    g_strings[g_strings_offset] = 0;
+    g_strings_offset++;
+    return g_strings + offset;
+}
+
 void config_initialize() {
     fat_file_info file_info;
     if(fat32_root_find((uint8_t *) CONFIG_FILE, &file_info)) log_panic("Could not find config file");
     if(file_info.size > 0x1000) log_panic("Config file exceeded maximum size limit");
 
     void *address = pmm_request_page(1);
-    vmm_map_memory((uint64_t) (uintptr_t) address, (uint64_t) (uintptr_t) address);
+    g_strings = pmm_request_page(1);
+    g_strings_offset = 0;
     fat32_read(file_info.cluster_number, 0, file_info.size, address);
 
     g_config = (char *) address;

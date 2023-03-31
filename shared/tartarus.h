@@ -41,6 +41,7 @@ typedef struct {
     uint16_t memory_map_length;
     tartarus_framebuffer_t *framebuffer;
     uint64_t hhdm_address;
+    void *rsdp;
 } __attribute__((packed)) tartarus_parameters_t;
 
 #endif

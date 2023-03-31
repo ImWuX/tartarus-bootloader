@@ -21,6 +21,7 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
     - PAE is set in `CR4`
     - LME is set in `EFER`
     - NX is set in `EFER` (if supported)
+- RDI contains a pointer to the `tartarus_parameters_t` struct which contains parameters passed to the kernel. For mor information on this structure check out the shared header files.
 
 ## The Virtual Memory Map
 - 4GB and all non `BAD` memory entries will be mapped starting at
