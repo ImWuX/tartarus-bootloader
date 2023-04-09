@@ -37,6 +37,8 @@ typedef struct {
 
 typedef struct {
     uint8_t boot_drive;
+    void *kernel_symbols;
+    uint64_t kernel_symbols_size;
     tartarus_memap_entry_t *memory_map;
     uint16_t memory_map_length;
     tartarus_framebuffer_t *framebuffer;

@@ -86,7 +86,7 @@ entry_long:
     or eax, (1 << 11)                           ; Set NX
     wrmsr
 .noxd:
-    mov rax, DATA_SEGMENT                       ; Reset segments just incase
+    mov rax, DATA_SEGMENT                       ; Reset segments just in-case
     mov ds, rax
     mov ss, rax
     mov es, rax
@@ -97,6 +97,8 @@ entry_long:
     mov edi, dword [load_ret]                   ; Gets the parameter struct
     mov rax, qword [edi]                        ; Gets the entry address
     add edi, 16                                 ; Increment to skip the entry address
+    push qword 0                                ; Push an invalid return address
+    xor rbp, rbp                                ; Invalid stack frame for stack traces
     jmp rax                                     ; Load kernel
 
 load_ret: dd 0

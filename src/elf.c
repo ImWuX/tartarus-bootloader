@@ -68,7 +68,7 @@ elf64_addr_t elf_read_file(uint32_t cluster_num) {
         if(s > size) size = s;
     }
 
-    uint64_t page_count = size / 0x1000 + (size % 0x1000 > 0 ? 1 : 0);
+    uint64_t page_count = (size + 0xFFF) / 0x1000;
     void *phys_address = pmm_request_linear_pages_type(page_count, TARTARUS_MEMAP_TYPE_KERNEL);
     for(uint64_t i = 0; i < page_count; i++) {
         vmm_map_memory((uint64_t) (uint32_t) phys_address + i * 0x1000, base_address + i * 0x1000);
