@@ -27,12 +27,6 @@ typedef struct {
     uint64_t address;
     uint8_t memory_model;
     uint16_t pitch;
-    uint8_t mask_red_size;
-    uint8_t mask_red_shift;
-    uint8_t mask_green_size;
-    uint8_t mask_green_shift;
-    uint8_t mask_blue_size;
-    uint8_t mask_blue_shift;
 } __attribute__((packed)) tartarus_framebuffer_t;
 
 typedef struct {

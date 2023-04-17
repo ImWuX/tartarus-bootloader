@@ -61,6 +61,8 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
 
         vesa_vbe_mode_info_t *mode_info = (vesa_vbe_mode_info_t *) ((uint32_t) info_buffer + 512);
         if(mode_info->memory_model != MEMORY_MODEL_RGB) continue;
+        if(mode_info->red_mask != 8 || mode_info->blue_mask != 8 || mode_info->green_mask != 8 || mode_info->reserved_mask != 8) continue;
+        if(mode_info->red_position != 16 || mode_info->green_position != 8 || mode_info->blue_position != 0 || mode_info->reserved_position != 24) continue;
         if(!(mode_info->attributes & LINEAR_FRAMEBUFFER)) continue;
         if(mode_info->bpp != target_bpp) continue;
 
@@ -92,20 +94,8 @@ void *vesa_setup(uint16_t target_width, uint16_t target_height, uint8_t target_b
     tartarus_framebuffer->address = mode_info->framebuffer;
     if(vbe_info->version_major < 3) {
         tartarus_framebuffer->pitch = mode_info->pitch;
-        tartarus_framebuffer->mask_red_size = mode_info->red_mask;
-        tartarus_framebuffer->mask_red_shift = mode_info->red_position;
-        tartarus_framebuffer->mask_green_size = mode_info->green_mask;
-        tartarus_framebuffer->mask_green_shift = mode_info->green_position;
-        tartarus_framebuffer->mask_blue_size = mode_info->blue_mask;
-        tartarus_framebuffer->mask_blue_shift = mode_info->blue_position;
     } else {
         tartarus_framebuffer->pitch = mode_info->linear_pitch;
-        tartarus_framebuffer->mask_red_size = mode_info->linear_red_mask_size;
-        tartarus_framebuffer->mask_red_shift = mode_info->linear_red_mask_position;
-        tartarus_framebuffer->mask_green_size = mode_info->linear_green_mask_size;
-        tartarus_framebuffer->mask_green_shift = mode_info->linear_green_mask_position;
-        tartarus_framebuffer->mask_blue_size = mode_info->linear_blue_mask_size;
-        tartarus_framebuffer->mask_blue_shift = mode_info->linear_blue_mask_position;
     }
 
     set_video_mode(closest_mode);

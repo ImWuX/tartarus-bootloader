@@ -44,7 +44,8 @@ The Tartarus Boot Protocol describes the state that the Tartarus bootloader will
 ## VESA Framebuffer
 - The VESA mode will be set to:
     - Linear
-    - RGB
+    - RGBA
     - 32BPP
+    - A pixel will be packed as such (`BBGGRRAA`)
 
   if the GPU does not support this framebuffer, it will not load the kernel
