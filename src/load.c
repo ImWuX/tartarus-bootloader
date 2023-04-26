@@ -18,7 +18,8 @@ typedef struct {
     uint64_t memory_map;
     uint16_t memory_map_length;
     uint64_t framebuffer;
-    uint64_t hhdm_address;
+    uint64_t hhdm_start;
+    uint64_t hhdm_end;
     uint64_t rsdp;
 } __attribute__((packed)) tartarus_internal_params_t;
 
@@ -35,7 +36,8 @@ tartarus_internal_params_t *load() {
     pmm_initialize();
     log("Tartarus | Physical Memory Initialized\n");
 
-    vmm_initialize(g_memap, g_memap_length);
+    uint64_t highest_mapped_address;
+    vmm_initialize(g_memap, g_memap_length, &highest_mapped_address);
     log("Tartarus | Virtual Memory Initialized\n");
 
     fat32_initialize();
@@ -47,7 +49,8 @@ tartarus_internal_params_t *load() {
     tartarus_internal_params_t *params = pmm_request_page();
     params->boot_drive = disk_drive();
     params->memory_map = (uint32_t) g_memap;
-    params->hhdm_address = HHDM_OFFSET;
+    params->hhdm_start = HHDM_OFFSET;
+    params->hhdm_end = HHDM_OFFSET + highest_mapped_address;
     if(config_read_bool("acpi_find_rsdp", false)) {
         params->rsdp = (uint64_t) acpi_find_rsdp();
         log("Tartarus | RSDP At: $\n", params->rsdp);
