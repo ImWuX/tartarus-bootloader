@@ -1,0 +1,6 @@
+*.o
+*.so
+*.bin
+*.elf
+*.efi
+limine-efi/
