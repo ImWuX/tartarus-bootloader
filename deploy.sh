@@ -114,6 +114,7 @@ if [ -n "$1" ]; then
                 mmd -i tmp.img "::EFI/BOOT"
                 mcopy -i tmp.img core/tartarus.efi "::EFI/BOOT/BOOTX64.EFI"
                 dd if=tmp.img of=$IMAGE bs=512 count=100000 seek=2048 conv=notrunc
+                rm -f tmp.img
 
                 echo -e ""$COLL"Cleaning up"$COLR"" >&3
                 make -C core clean TARGET="$TARGET" EFIDIR="$(realpath limine-efi)"

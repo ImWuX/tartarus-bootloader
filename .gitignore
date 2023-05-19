@@ -4,3 +4,4 @@
 *.elf
 *.efi
 limine-efi/
+config.mk

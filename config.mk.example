@@ -1,0 +1,11 @@
+CC = gcc
+LD = ld
+OBJCPY = objcopy
+ASMC = nasm
+GIT = git
+
+# Required for target amd64-uefi64
+AMD64_LIBGCC =
+
+# Required for target amd64-bios
+IA32_LIBGCC =

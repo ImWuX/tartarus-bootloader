@@ -2,8 +2,20 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <core.h>
+#include <graphics/basicfont.h>
+#include <graphics/fb.h>
+#ifdef __BIOS
+#include <int.h>
+#endif
 
-static char *chars = "0123456789ABCDEF";
+#define INSET 100
+
+#define FG 0xFFFFFFFF
+#define BG 0x00000000
+
+static char *g_chars = "0123456789ABCDEF";
+static int g_x = 0;
+static int g_y = 0;
 
 static void numprint(uint64_t value, uint64_t radix) {
     uint64_t pw = 1;
@@ -11,10 +23,17 @@ static void numprint(uint64_t value, uint64_t radix) {
 
     while(pw > 0) {
         uint8_t c = value / pw;
-        log_putchar(chars[c]);
+        log_putchar(g_chars[c]);
         value %= pw;
         pw /= radix;
     }
+}
+
+[[noreturn]] void log_panic(char *str) {
+    log("PANIC! ");
+    log(str);
+    while(true) asm volatile("cli\nhlt");
+    __builtin_unreachable();
 }
 
 void log(char *str, ...) {
@@ -49,16 +68,32 @@ void log(char *str, ...) {
     va_end(args);
 }
 
-void log_putchar(__attribute__((unused)) char c) {
-
-}
-
-// void log_panic(char *str) {
-//     log("Tartarus Panic | ");
-//     log(str);
-//     asm("cli\nhlt");
-//     __builtin_unreachable();
-// }
-
-void log_clear() {
+void log_putchar(char c) {
+    if(g_fb_initialized) {
+        switch(c) {
+            case '\n':
+                g_y++;
+                g_x = 0;
+                break;
+            default:
+                fb_char(INSET + g_x * BASICFONT_WIDTH, INSET + g_y * BASICFONT_HEIGHT, c, FG);
+                g_x ++;
+                break;
+        }
+        if(INSET + g_x * BASICFONT_WIDTH >= g_fb_width - INSET) g_x = 0;
+        if(INSET + g_y * BASICFONT_HEIGHT >= g_fb_height - INSET) {
+            if(g_fb_initialized) fb_clear(BG);
+            g_y = 0;
+        }
+    } else {
+#ifdef __UEFI
+        CHAR16 tmp[2] = { c, 0 };
+        g_st->ConOut->OutputString(g_st->ConOut, (CHAR16 *) &tmp);
+#endif
+#ifdef __BIOS
+        int_regs_t regs = { .eax = (0xE << 8) | c };
+        int_exec(0x10, &regs);
+        if(c == '\n') log_putchar('\r');
+#endif
+    }
 }
