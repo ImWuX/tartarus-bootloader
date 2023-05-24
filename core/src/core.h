@@ -8,6 +8,8 @@
 extern EFI_SYSTEM_TABLE *g_st;
 #endif
 
+#if defined __BIOS && defined __AMD64
 void core();
+#endif
 
 #endif

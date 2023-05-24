@@ -21,8 +21,11 @@ EFI_SYSTEM_TABLE *g_st;
 
     pmm_initialize();
 
-    // SystemTable->BootServices->ExitBootServices(ImageHandle, map_key);
+    for(int i = 0; i < 5; i++) {
+        log(">> %x\n", (uint64_t) pmm_alloc_page());
+    }
 
+    // SystemTable->BootServices->ExitBootServices(ImageHandle, map_key);
     while(true);
 }
 #endif
@@ -32,6 +35,10 @@ EFI_SYSTEM_TABLE *g_st;
     fb_initialize(1920, 1080);
 
     pmm_initialize();
+
+    for(int i = 0; i < 5; i++) {
+        log(">> %x\n", (uint64_t) pmm_alloc_page());
+    }
 
     while(true);
 }

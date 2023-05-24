@@ -75,6 +75,9 @@ void log_putchar(char c) {
                 g_y++;
                 g_x = 0;
                 break;
+            case '\t':
+                g_x += 4 - g_x % 4;
+                break;
             default:
                 fb_char(INSET + g_x * BASICFONT_WIDTH, INSET + g_y * BASICFONT_HEIGHT, c, FG);
                 g_x ++;

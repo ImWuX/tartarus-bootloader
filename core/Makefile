@@ -65,7 +65,7 @@ endif
 # FLAGS ( 64-bit )
 ifeq ($(TARGET), amd64-uefi64)
     ASMFLAGS += -f elf64
-    CFLAGS += -m64 -march=x86-64 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -march=x86-64
+    CFLAGS += -m64 -march=x86-64 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone
 endif
 
 # FLAGS ( bios )

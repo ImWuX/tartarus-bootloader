@@ -6,6 +6,14 @@ CPU State
 - A20 line enabled
 
 
+Memory Map
+- Sorted by `base`
+- `USABLE`/`BOOT_RECLAIMABLE` entries are...
+    - Always page aligned
+    - Never overlapping with other entries
+- 0 - 0x1000 is never `USABLE`
+
+
 # This state is described by UEFI
 ```
 Uniprocessor, as described in chapter 8.4 of:
