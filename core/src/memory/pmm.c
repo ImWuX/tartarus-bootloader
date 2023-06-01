@@ -1,3 +1,4 @@
+#include "pmm.h"
 #include <tartarus.h>
 #include <log.h>
 #include <libc.h>
@@ -7,10 +8,6 @@
 #ifdef __UEFI
 #include <core.h>
 #include <efi.h>
-#endif
-
-#ifdef __AMD64
-#define PAGE_SIZE 0x1000
 #endif
 
 #define MAX_MEMAP_ENTRIES 512
@@ -196,14 +193,14 @@ void pmm_initialize() {
 
 #ifdef __UEFI
 void pmm_initialize() {
-    EFI_STATUS status;
     UINTN map_size = 0;
     EFI_MEMORY_DESCRIPTOR *map = NULL;
     UINTN map_key;
     UINTN descriptor_size;
     UINT32 descriptor_version;
-    status = g_st->BootServices->GetMemoryMap(&map_size, map, &map_key, &descriptor_size, &descriptor_version);
+    EFI_STATUS status = g_st->BootServices->GetMemoryMap(&map_size, map, &map_key, &descriptor_size, &descriptor_version);
     if(status == EFI_BUFFER_TOO_SMALL) {
+        map_size += descriptor_size * 6;
         status = g_st->BootServices->AllocatePool(EfiBootServicesData, map_size, (void **) &map);
         if(EFI_ERROR(status)) log_panic("Unable to allocate pool for UEFI memory map");
         status = g_st->BootServices->GetMemoryMap(&map_size, map, &map_key, &descriptor_size, &descriptor_version);

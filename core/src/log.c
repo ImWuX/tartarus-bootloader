@@ -4,7 +4,7 @@
 #include <core.h>
 #include <graphics/basicfont.h>
 #include <graphics/fb.h>
-#ifdef __BIOS
+#if defined __BIOS && defined __AMD64
 #include <int.h>
 #endif
 
@@ -93,7 +93,7 @@ void log_putchar(char c) {
         CHAR16 tmp[2] = { c, 0 };
         g_st->ConOut->OutputString(g_st->ConOut, (CHAR16 *) &tmp);
 #endif
-#ifdef __BIOS
+#if defined __BIOS && defined __AMD64
         int_regs_t regs = { .eax = (0xE << 8) | c };
         int_exec(0x10, &regs);
         if(c == '\n') log_putchar('\r');

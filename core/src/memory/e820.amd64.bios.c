@@ -8,10 +8,7 @@
 int e820_load(void *dest, int max) {
     int count = 0;
 
-    int_regs_t regs = {};
-    regs.es = 0;
-    regs.edi = (uint32_t) dest;
-    regs.ebx = 0;
+    int_regs_t regs = { .edi = (uint32_t) dest };
     while(count < max) {
         *((uint32_t *) regs.edi + 20) = 1;
         regs.eax = 0xE820;
