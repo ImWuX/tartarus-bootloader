@@ -11,6 +11,8 @@
 #endif
 
 #define MAX_MEMAP_ENTRIES 512
+#define CONVENTIONAL_BOUNDARY 0xA0000
+#define UPPER_BOUNDARY 0x100000
 
 static int g_map_size;
 static tartarus_mmap_entry_t g_map[MAX_MEMAP_ENTRIES];
@@ -20,7 +22,7 @@ static void map_insert(int index, tartarus_mmap_entry_t entry) {
     for(int i = g_map_size; i > index; i--) {
         g_map[i] = g_map[i - 1];
     }
-    g_map[g_map_size] = entry;
+    g_map[index] = entry;
     g_map_size++;
 }
 
@@ -119,36 +121,88 @@ static void map_sanitize() {
     }
 }
 
-void *pmm_alloc_page_type(tartarus_mmap_type_t type) {
+void *pmm_claim(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, pmm_area_t area, size_t page_count) {
+    uintptr_t area_start;
+    uintptr_t area_end;
+    switch(area) {
+        case PMM_AREA_CONVENTIONAL:
+            area_start = 0;
+            area_end = CONVENTIONAL_BOUNDARY;
+            break;
+        case PMM_AREA_UPPER:
+            area_start = CONVENTIONAL_BOUNDARY;
+            area_end = UPPER_BOUNDARY;
+            break;
+        case PMM_AREA_EXTENDED:
+            area_start = UPPER_BOUNDARY;
+            area_end = UINTPTR_MAX;
+            break;
+        default: log_panic("Invalid memory area");
+    }
+
+    size_t length = page_count * PAGE_SIZE;
     for(int i = 0; i < g_map_size; i++) {
-        if(g_map[i].type != TARTARUS_MEMAP_TYPE_USABLE) continue;
-        if(g_map[i].base + PAGE_SIZE > UINTPTR_MAX) continue;
-        if(g_map[i].length == PAGE_SIZE) {
-            g_map[i].type = type;
-            return (void *) (uintptr_t) g_map[i].base;
-        } else {
-            uint64_t base = g_map[i].base;
-            g_map[i].base += PAGE_SIZE;
-            g_map[i].length -= PAGE_SIZE;
+        if(g_map[i].type != src_type) continue;
+        if(g_map[i].base + g_map[i].length <= area_start) continue; // entry ends before area start
+        if(g_map[i].base >= area_end) continue; // entry starts after area end
 
-            int index = 0;
-            for(; index < g_map_size; index++) {
-                if(g_map[index].base > base) break;
-            }
+        uintptr_t ue_base = g_map[i].base;
+        if(g_map[i].base < area_start) ue_base = area_start;
+        uintptr_t ue_length = g_map[i].length - (ue_base - g_map[i].base);
+        if(ue_base + ue_length > area_end) ue_length -= (ue_base + ue_length) - area_end;
+        if(ue_length < length) continue; // claim does not fit inside entry
 
-            map_insert(index, (tartarus_mmap_entry_t) {
-                .base = base,
-                .length = PAGE_SIZE,
-                .type = type
+        if(g_map[i].base + g_map[i].length > ue_base + length) {
+            size_t offset = (g_map[i].base + g_map[i].length) - (ue_base + length);
+            map_insert(i + 1, (tartarus_mmap_entry_t) {
+                .base = ue_base + length,
+                .length = offset,
+                .type = g_map[i].type
             });
-            return (void *) (uintptr_t) base;
+            g_map[i].length -= offset;
         }
+
+        if(ue_base > g_map[i].base) {
+            g_map[i].length -= length;
+            map_insert(i, (tartarus_mmap_entry_t) {
+                .base = ue_base,
+                .length = length,
+                .type = dest_type
+            });
+        } else {
+            g_map[i].type = dest_type;
+        }
+
+        restart_merge:
+        for(int x = 0; x < g_map_size; x++) {
+            for(int y = 0; y < g_map_size; y++) {
+                if(x == y) continue;
+                if(g_map[x].type != g_map[y].type) continue;
+                if(g_map[x].base + g_map[x].length == g_map[y].base) {
+                    g_map[x].length += g_map[y].length;
+                    map_delete(y);
+                    goto restart_merge;
+                }
+            }
+        }
+
+        return (void *) ue_base;
     }
     log_panic("Out of memory");
 }
 
+void *pmm_alloc_pages(size_t page_count) {
+    return pmm_claim(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, PMM_AREA_CONVENTIONAL, page_count);
+}
+
 void *pmm_alloc_page() {
-    return pmm_alloc_page_type(TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE);
+    return pmm_claim(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, PMM_AREA_CONVENTIONAL, 1);
+}
+
+void pmm_map() {
+    for(int i = 0; i < g_map_size; i++) {
+        log("Entry %i >> Type: %i, Base: %x, Length: %x\n", (uint64_t) i, (uint64_t) g_map[i].type, (uint64_t) g_map[i].base, (uint64_t) g_map[i].length);
+    }
 }
 
 #if defined __AMD64 && defined __BIOS
