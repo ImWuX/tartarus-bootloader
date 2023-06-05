@@ -48,16 +48,21 @@ void disk_initialize() {
         if(regs.eflags & EFLAGS_CF) continue;
 
         disk_t *disk = heap_alloc(sizeof(disk_t));
-        disk->next = g_disks;
-        g_disks = disk;
 
         disk->drive_number = i;
-        disk->sector_size = params.sector_size; // TODO: The sector size provided by BIOS can be unreliable. We can manually figure out the size by reading into a filled buffer and empty buffer and figuring out where the last modified byte is.
+        disk->sector_size = params.sector_size; // TODO: The sector size provided by BIOS is unreliable. We can manually figure out the size by reading into a filled buffer and empty buffer and figuring out where the last modified byte is.
+        disk->sector_count = params.abs_sectors;
 
-        void *buf = pmm_alloc_page();
-        if(disk_read_sector(disk, 0, 1, buf)) continue; // TODO: Allocate many pages if disk sector size is larger than a page... Unlikely but possible
-        disk->writable = !disk_write_sector(disk, 0, 1, buf);
+        int buf_pages = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        void *buf = pmm_alloc_pages(buf_pages, PMM_AREA_EXTENDED);
+        if(disk_read_sector(disk, 0, buf_pages, buf)) {
+            heap_free(disk);
+            continue;
+        }
+        disk->writable = !disk_write_sector(disk, 0, buf_pages, buf);
         // TODO: Free buf
+        disk->next = g_disks;
+        g_disks = disk;
     }
 }
 
@@ -113,7 +118,9 @@ void disk_initialize() {
     for(UINTN i = 0; i < buffer_size; i += sizeof(EFI_HANDLE)) {
         EFI_BLOCK_IO *io;
         status = g_st->BootServices->OpenProtocol(*buffer++, &guid, (void **) &io, g_imagehandle, NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
-        if(EFI_ERROR(status) || !io || io->Media->LastBlock == 0) continue;
+        if(EFI_ERROR(status) || !io || io->Media->LastBlock == 0 || io->Media->LogicalPartition) continue;
+
+        io->Media->WriteCaching = false;
 
         disk_t *disk = heap_alloc(sizeof(disk_t));
         disk->next = g_disks;
@@ -122,6 +129,7 @@ void disk_initialize() {
         disk->io = io;
         disk->writable = !io->Media->ReadOnly;
         disk->sector_size = io->Media->BlockSize;
+        disk->sector_count = io->Media->LastBlock + 1;
     }
 }
 

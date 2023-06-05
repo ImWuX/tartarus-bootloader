@@ -191,12 +191,12 @@ void *pmm_claim(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, p
     log_panic("Out of memory");
 }
 
-void *pmm_alloc_pages(size_t page_count) {
-    return pmm_claim(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, PMM_AREA_CONVENTIONAL, page_count);
+void *pmm_alloc_pages(size_t page_count, pmm_area_t area) {
+    return pmm_claim(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, area, page_count);
 }
 
 void *pmm_alloc_page() {
-    return pmm_claim(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, PMM_AREA_CONVENTIONAL, 1);
+    return pmm_claim(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, PMM_AREA_EXTENDED, 1);
 }
 
 void pmm_map() {

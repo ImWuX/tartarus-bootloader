@@ -6,6 +6,7 @@
 
 #ifdef __AMD64
 #define PAGE_SIZE 0x1000
+#define PAGE_SIZE_LARGE 0x200000
 #endif
 
 typedef enum {
@@ -16,8 +17,8 @@ typedef enum {
 
 void pmm_initialize();
 void *pmm_claim(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, pmm_area_t area, size_t page_count);
+void *pmm_alloc_pages(size_t page_count, pmm_area_t area);
 void *pmm_alloc_page();
-void *pmm_alloc_pages(size_t page_count);
 
 void pmm_map();
 

@@ -4,8 +4,10 @@
 #include <log.h>
 #include <graphics/fb.h>
 #include <memory/pmm.h>
+#include <memory/vmm.h>
 #include <memory/heap.h>
 #include <disk.h>
+#include <protocols/handoff.h>
 
 #ifdef __UEFI
 EFI_SYSTEM_TABLE *g_st;
@@ -28,15 +30,16 @@ EFI_HANDLE g_imagehandle;
 
     disk_t *disk = g_disks;
     while(disk) {
-        log(">> %i, present: %i, isPart: %i, lowLba: %x, lastBlock: %x\n",
+        log(">> Disk %i { SectorCount: %x, SectorSize: %i, Writable: %i }\n",
             (uint64_t) disk->io->Media->MediaId,
-            (uint64_t) disk->io->Media->MediaPresent,
-            (uint64_t) disk->io->Media->LogicalPartition,
-            (uint64_t) disk->io->Media->LowestAlignedLba,
-            (uint64_t) disk->io->Media->LastBlock
+            (uint64_t) disk->sector_count,
+            (uint64_t) disk->sector_size,
+            (uint64_t) disk->writable
         );
         disk = disk->next;
     }
+
+    vmm_initialize();
 
     // SystemTable->BootServices->ExitBootServices(ImageHandle, map_key);
     while(true);
@@ -48,6 +51,22 @@ EFI_HANDLE g_imagehandle;
     fb_initialize(1920, 1080);
     pmm_initialize();
     disk_initialize();
+
+    disk_t *disk = g_disks;
+    while(disk) {
+        log(">> Disk %i { SectorCount: %x, SectorSize: %i, Writable: %i }\n",
+            (uint64_t) disk->drive_number,
+            (uint64_t) disk->sector_count,
+            (uint64_t) disk->sector_size,
+            (uint64_t) disk->writable
+        );
+        disk = disk->next;
+    }
+
+    
+
+    vmm_initialize();
+    handoff();
 
     while(true);
 }

@@ -15,7 +15,8 @@ case $@ in
             -vnc :0,websocket=on \
             -D ./log.txt -d int \
             -M smm=off \
-            -k en-us
+            -k en-us \
+            -monitor stdio
         ;;
     uefi)
         rm -f test.img
@@ -34,7 +35,8 @@ case $@ in
             -vnc :0,websocket=on \
             -D ./log.txt -d int \
             -M smm=off \
-            -k en-us
+            -k en-us \
+            -monitor stdio
         ;;
 esac
 

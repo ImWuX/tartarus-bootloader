@@ -32,8 +32,7 @@ static void delete(heap_entry_t *entry) {
 }
 
 static heap_entry_t *alloc(int pages) {
-    if(pages > 1) log_panic("Currently heap allocations exceeding one page are not supported");
-    heap_entry_t *new_entry = pmm_alloc_page();
+    heap_entry_t *new_entry = pmm_alloc_pages(pages, PMM_AREA_EXTENDED);
     new_entry->free = true;
     new_entry->size = PAGE_SIZE - sizeof(heap_entry_t);
     new_entry->next = g_heap;

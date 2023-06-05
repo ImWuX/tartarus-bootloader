@@ -13,6 +13,7 @@ typedef struct disk {
 #ifdef __UEFI
     EFI_BLOCK_IO *io;
 #endif
+    uint64_t sector_count;
     uint16_t sector_size;
     bool writable;
     struct disk *next;
