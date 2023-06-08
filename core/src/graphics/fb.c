@@ -60,7 +60,7 @@ void fb_initialize(uint16_t target_width, uint16_t target_height) {
     regs.es = int_16bit_segment(&vbe_info);
     regs.edi = int_16bit_offset(&vbe_info);
     int_exec(0x10, &regs);
-    if((regs.eax & 0xFFFF) != 0x4F) log_panic("Loading VBE 2.0 info failed");
+    if((regs.eax & 0xFFFF) != 0x4F) log_panic("FB", "Loading VBE 2.0 info failed");
     uint64_t closest_diff = UINT64_MAX;
     uint16_t closest_mode = 0xFFFF;
 
@@ -74,7 +74,7 @@ void fb_initialize(uint16_t target_width, uint16_t target_height) {
         regs.es = int_16bit_segment((uint32_t) &mode_info);
         regs.edi = int_16bit_offset((uint32_t) &mode_info);
         int_exec(0x10, &regs);
-        if((regs.eax & 0xFFFF) != 0x4F) log_panic("Loading VBE mode info failed");
+        if((regs.eax & 0xFFFF) != 0x4F) log_panic("FB", "Loading VBE mode info failed");
 
         modes++;
 
@@ -91,7 +91,7 @@ void fb_initialize(uint16_t target_width, uint16_t target_height) {
         closest_mode = mode;
     }
 
-    if(closest_mode == 0xFFFF) log_panic("Could not find an appropriate display mode");
+    if(closest_mode == 0xFFFF) log_panic("FB", "Could not find an appropriate display mode");
 
     memset(&regs, 0, sizeof(int_regs_t));
     regs.eax = 0x4F01;
@@ -127,7 +127,7 @@ void fb_initialize(uint16_t target_width, uint16_t target_height) {
     regs.eax = 0x4F02;
     regs.ebx = closest_mode | USE_LFB;
     int_exec(0x10, &regs);
-    if((regs.eax & 0xFFFF) != 0x4F) log_panic("Setting VESA mode failed");
+    if((regs.eax & 0xFFFF) != 0x4F) log_panic("FB", "Setting VESA mode failed");
 
     g_fb_initialized = true;
     // uint64_t framebuffer_length = (uint64_t) tartarus_framebuffer->height * (uint64_t) tartarus_framebuffer->pitch;

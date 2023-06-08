@@ -3,6 +3,7 @@
 
 void log(char *str, ...);
 void log_putchar(char c);
-[[noreturn]] void log_panic(char *str);
+void log_warning(char *src, char *str, ...);
+[[noreturn]] void log_panic(char *src, char *str, ...);
 
 #endif

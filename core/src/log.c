@@ -29,21 +29,15 @@ static void numprint(uint64_t value, uint64_t radix) {
     }
 }
 
-[[noreturn]] void log_panic(char *str) {
-    log("PANIC! ");
-    log(str);
-    while(true) asm volatile("cli\nhlt");
-    __builtin_unreachable();
-}
-
-void log(char *str, ...) {
-    va_list args;
-    va_start(args, str);
-
+static void log_list(char *str, va_list args) {
     bool escaped = false;
     while(*str) {
         if(escaped) {
             switch(*str) {
+                case 's':
+                    char *s = va_arg(args, char *);
+                    while(*s) log_putchar(*s++);
+                    break;
                 case 'x':
                     log_putchar('0');
                     log_putchar('x');
@@ -64,7 +58,30 @@ void log(char *str, ...) {
         }
         str++;
     }
+}
 
+void log_warning(char *src, char *str, ...) {
+    log("WARN! [%s] ", src);
+    va_list args;
+    va_start(args, str);
+    log_list(str, args);
+    va_end(args);
+}
+
+[[noreturn]] void log_panic(char *src, char *str, ...) {
+    log("PANIC! [%s] ", src);
+    va_list args;
+    va_start(args, str);
+    log_list(str, args);
+    va_end(args);
+    while(true) asm volatile("cli\nhlt");
+    __builtin_unreachable();
+}
+
+void log(char *str, ...) {
+    va_list args;
+    va_start(args, str);
+    log_list(str, args);
     va_end(args);
 }
 

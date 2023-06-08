@@ -54,7 +54,7 @@ void disk_initialize() {
         disk->sector_count = params.abs_sectors;
 
         int buf_pages = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
-        void *buf = pmm_alloc_pages(buf_pages, PMM_AREA_EXTENDED);
+        void *buf = pmm_alloc_pages(buf_pages, PMM_AREA_CONVENTIONAL);
         if(disk_read_sector(disk, 0, buf_pages, buf)) {
             heap_free(disk);
             continue;
@@ -69,22 +69,28 @@ void disk_initialize() {
 bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *dest) {
     disk_address_packet_t dap = {
         .size = sizeof(disk_address_packet_t),
-        .sector_count = sector_count,
-        .disk_lba = lba,
-        .memory_segment = int_16bit_segment(dest),
-        .memory_offset = int_16bit_offset(dest)
+        .sector_count = 1,
     };
     int_regs_t regs = {
-        .eax = (0x42 << 8),
         .edx = disk->drive_number,
         .ds = int_16bit_segment(&dap),
         .esi = int_16bit_offset(&dap)
     };
-    int_exec(0x13, &regs); // TODO: Care must be taken to ensure the complete buffer is within the given segment
-    return regs.eflags & EFLAGS_CF;
+    for(uint16_t i = 0; i < sector_count; i++) {
+        dap.disk_lba = lba;
+        dap.memory_segment = int_16bit_segment(dest);
+        dap.memory_offset = int_16bit_offset(dest);
+        regs.eax = (0x42 << 8);
+        int_exec(0x13, &regs);
+        if(regs.eflags & EFLAGS_CF) return true;
+        lba++;
+        dest += disk->sector_size;
+    }
+    return false;
 }
 
 bool disk_write_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *src) {
+    // TODO: Rewrite like the read to write sectors one-by-one
     disk_address_packet_t dap = {
         .size = sizeof(disk_address_packet_t),
         .sector_count = sector_count,
@@ -113,7 +119,7 @@ void disk_initialize() {
         buffer = heap_alloc(buffer_size);
         status = g_st->BootServices->LocateHandle(ByProtocol, &guid, NULL, &buffer_size, buffer);
     }
-    if(EFI_ERROR(status)) log_panic("Failed to retrieve block I/O handles");
+    if(EFI_ERROR(status)) log_panic("DISK", "Failed to retrieve block I/O handles");
 
     for(UINTN i = 0; i < buffer_size; i += sizeof(EFI_HANDLE)) {
         EFI_BLOCK_IO *io;

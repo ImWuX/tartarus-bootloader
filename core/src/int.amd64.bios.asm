@@ -11,12 +11,12 @@ extern gdt_set_protected
 global int_exec
 int_exec:
     mov al, byte [esp + 4]
-    mov byte [.int_no], al                      ; Save the interrupt number of the stack
+    mov byte [.int_no], al                      ; Set the interrupt number
 
     mov eax, dword [esp + 8]
     mov dword [.regs], eax                      ; Save the pointer to regs
 
-    sgdt [.gdt]                                 ; Save GDT just in case bios overwrites it
+    o32 sgdt [.gdt]                             ; Save GDT just in case bios overwrites it
 
 	lidt [.idt]                                 ; Load BIOS idt
 

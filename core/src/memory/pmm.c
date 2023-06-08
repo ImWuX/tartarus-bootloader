@@ -10,6 +10,8 @@
 #include <efi.h>
 #endif
 
+typedef int SYMBOL[];
+
 #define MAX_MEMAP_ENTRIES 512
 #define CONVENTIONAL_BOUNDARY 0xA0000
 #define UPPER_BOUNDARY 0x100000
@@ -18,7 +20,7 @@ static int g_map_size;
 static tartarus_mmap_entry_t g_map[MAX_MEMAP_ENTRIES];
 
 static void map_insert(int index, tartarus_mmap_entry_t entry) {
-    if(g_map_size == MAX_MEMAP_ENTRIES) log_panic("Memory map overflow");
+    if(g_map_size == MAX_MEMAP_ENTRIES) log_panic("PMM", "Memory map overflow");
     for(int i = g_map_size; i > index; i--) {
         g_map[i] = g_map[i - 1];
     }
@@ -137,7 +139,7 @@ void *pmm_claim(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, p
             area_start = UPPER_BOUNDARY;
             area_end = UINTPTR_MAX;
             break;
-        default: log_panic("Invalid memory area");
+        default: log_panic("PMM", "Invalid memory area");
     }
 
     size_t length = page_count * PAGE_SIZE;
@@ -188,7 +190,7 @@ void *pmm_claim(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, p
 
         return (void *) ue_base;
     }
-    log_panic("Out of memory");
+    log_panic("PMM", "Out of memory");
 }
 
 void *pmm_alloc_pages(size_t page_count, pmm_area_t area) {
@@ -207,6 +209,9 @@ void pmm_map() {
 
 #if defined __AMD64 && defined __BIOS
 #define E820_MAX 512
+
+extern SYMBOL __tartarus_start;
+extern SYMBOL __tartarus_end;
 
 void pmm_initialize() {
     g_map_size = 0;
@@ -241,6 +246,13 @@ void pmm_initialize() {
         });
     }
 
+    // Protect the initial stack
+    map_push((tartarus_mmap_entry_t) {
+        .base = 0x6000,
+        .length = (uintptr_t) __tartarus_end - 0x6000,
+        .type = TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE
+    });
+
     map_sanitize();
 }
 #endif
@@ -256,9 +268,9 @@ void pmm_initialize() {
     if(status == EFI_BUFFER_TOO_SMALL) {
         map_size += descriptor_size * 6;
         status = g_st->BootServices->AllocatePool(EfiBootServicesData, map_size, (void **) &map);
-        if(EFI_ERROR(status)) log_panic("Unable to allocate pool for UEFI memory map");
+        if(EFI_ERROR(status)) log_panic("PMM", "Unable to allocate pool for UEFI memory map");
         status = g_st->BootServices->GetMemoryMap(&map_size, map, &map_key, &descriptor_size, &descriptor_version);
-        if(EFI_ERROR(status)) log_panic("Unable retrieve the UEFI memory map");
+        if(EFI_ERROR(status)) log_panic("PMM", "Unable retrieve the UEFI memory map");
     }
 
     g_map_size = 0;

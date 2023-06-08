@@ -4,6 +4,7 @@ OUTPUT_ARCH(i386)
 SECTIONS
 {
     . = 0xA000;
+    __tartarus_start = .; 
 
     .text : {
         *(.entry)
@@ -22,4 +23,6 @@ SECTIONS
         *(.bss)
         *(COMMON)
     }
+
+    __tartarus_end = .;
 }
