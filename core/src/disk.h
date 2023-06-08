@@ -7,6 +7,7 @@
 #endif
 
 typedef struct disk_part {
+    uint32_t id;
     struct disk *disk;
     uint64_t lba;
     uint64_t size;
@@ -14,9 +15,7 @@ typedef struct disk_part {
 } disk_part_t;
 
 typedef struct disk {
-#if defined __BIOS && defined __AMD64
-    uint8_t drive_number;
-#endif
+    uint32_t id;
 #ifdef __UEFI
     EFI_BLOCK_IO *io;
 #endif

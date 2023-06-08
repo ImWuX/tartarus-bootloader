@@ -13,30 +13,7 @@
 
 disk_t *g_disks;
 
-#if defined __BIOS && defined __AMD64
-
-#define EFLAGS_CF (1 << 0)
 #define GPT_TYPE_PROTECTIVE 0xEE
-
-typedef struct {
-    uint8_t size;
-    uint8_t rsv0;
-    uint16_t sector_count;
-    uint16_t memory_offset;
-    uint16_t memory_segment;
-    uint64_t disk_lba;
-} __attribute__((packed)) disk_address_packet_t;
-
-typedef struct {
-    uint16_t size;
-    uint16_t info_flags;
-    uint32_t phys_cylinders;
-    uint32_t phys_heads;
-    uint32_t phys_sectors_per_track;
-    uint64_t abs_sectors;
-    uint16_t sector_size;
-    uint32_t edd_address;
-} __attribute__((packed)) ext_read_drive_params_t;
 
 typedef struct {
     uint8_t boot_indicator;
@@ -94,6 +71,7 @@ static void initialize_gpt_partitions(disk_t *disk, gpt_header_t *header) {
             }
             if(is_empty) continue;
             disk_part_t *partition = heap_alloc(sizeof(disk_part_t));
+            partition->id = i;
             partition->disk = disk;
             partition->lba = entry->start_lba;
             partition->size = entry->end_lba - entry->start_lba;
@@ -101,7 +79,7 @@ static void initialize_gpt_partitions(disk_t *disk, gpt_header_t *header) {
             disk->partitions = partition;
         }
     } else {
-        log_warning("PARTITION", "Ignoring drive %x. Read failed.", (uint64_t) disk->drive_number);
+        log_warning("PARTITION", "Ignoring drive %x. Read failed.", (uint64_t) disk->id);
     }
     // TODO: Free buf
 }
@@ -116,13 +94,37 @@ static void initialize_partitions(disk_t *disk) {
             disk_read_sector(disk, mbr->entries[0].start_lba, 1, buf);
             initialize_gpt_partitions(disk, (gpt_header_t *) buf);
         } else {
-            log_warning("PARTITION", "Ignoring drive %x because it is partitioned with a legacy MBR.", (uint64_t) disk->drive_number);
+            log_warning("PARTITION", "Ignoring drive %x because it is partitioned with a legacy MBR.", (uint64_t) disk->id);
         }
     } else {
-        log_warning("PARTITION", "Ignoring drive %x. Read failed.", (uint64_t) disk->drive_number);
+        log_warning("PARTITION", "Ignoring drive %x. Read failed.", (uint64_t) disk->id);
     }
     // TODO: Free buf
 }
+
+#if defined __BIOS && defined __AMD64
+
+#define EFLAGS_CF (1 << 0)
+
+typedef struct {
+    uint8_t size;
+    uint8_t rsv0;
+    uint16_t sector_count;
+    uint16_t memory_offset;
+    uint16_t memory_segment;
+    uint64_t disk_lba;
+} __attribute__((packed)) disk_address_packet_t;
+
+typedef struct {
+    uint16_t size;
+    uint16_t info_flags;
+    uint32_t phys_cylinders;
+    uint32_t phys_heads;
+    uint32_t phys_sectors_per_track;
+    uint64_t abs_sectors;
+    uint16_t sector_size;
+    uint32_t edd_address;
+} __attribute__((packed)) ext_read_drive_params_t;
 
 void disk_initialize() {
     for(int i = 0x80; i < 0xFF; i++) {
@@ -137,8 +139,7 @@ void disk_initialize() {
         if(regs.eflags & EFLAGS_CF) continue;
 
         disk_t *disk = heap_alloc(sizeof(disk_t));
-
-        disk->drive_number = i;
+        disk->id = i;
         disk->sector_size = params.sector_size; // TODO: The sector size provided by BIOS is unreliable. We can manually figure out the size by reading into a filled buffer and empty buffer and figuring out where the last modified byte is.
         disk->sector_count = params.abs_sectors;
 
@@ -163,7 +164,7 @@ bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *d
         .sector_count = 1,
     };
     int_regs_t regs = {
-        .edx = disk->drive_number,
+        .edx = disk->id,
         .ds = int_16bit_segment(&dap),
         .esi = int_16bit_offset(&dap)
     };
@@ -191,7 +192,7 @@ bool disk_write_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *
     };
     int_regs_t regs = {
         .eax = (0x43 << 8) | 1,
-        .edx = disk->drive_number,
+        .edx = disk->id,
         .ds = int_16bit_segment(&dap),
         .esi = int_16bit_offset(&dap)
     };
@@ -220,13 +221,16 @@ void disk_initialize() {
         io->Media->WriteCaching = false;
 
         disk_t *disk = heap_alloc(sizeof(disk_t));
-        disk->next = g_disks;
-        g_disks = disk;
-
+        disk->id = io->Media->MediaId;
         disk->io = io;
         disk->writable = !io->Media->ReadOnly;
         disk->sector_size = io->Media->BlockSize;
         disk->sector_count = io->Media->LastBlock + 1;
+        disk->partitions = 0;
+        initialize_partitions(disk);
+
+        disk->next = g_disks;
+        g_disks = disk;
     }
 }
 
