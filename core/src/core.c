@@ -63,8 +63,6 @@ EFI_HANDLE g_imagehandle;
         disk = disk->next;
     }
 
-    
-
     vmm_initialize();
     handoff();
 

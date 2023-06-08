@@ -22,20 +22,20 @@ entry_real:
     pushfd
     pop eax
     xor eax, ecx
-    jz .error
+    jz error.no_cpuid
 
     mov eax, 0x80000000                     ; Test for CPUID extended info
     cpuid
     cmp eax, 0x80000001
-    jb .error
+    jb error.no_cpuid_ext
 
     mov eax, 0x80000001                     ; Test for long mode
     cpuid
     test edx, 1 << 29
-    jz .error
+    jz error.long_mode_unsupported
 
     call enable_a20                         ; Enable the a20 line
-    jnc .error
+    jnc error.couldnt_enable_a20
 
     cli
     lgdt [gdt.descriptor]                   ; Load GDT
@@ -45,7 +45,27 @@ entry_real:
     mov cr0, eax
 
     jmp CODE_SEGMENT32:entry_protected      ; Long jump into protected gdt segment
-.error:
+
+error:
+.no_cpuid:
+    mov bl, '1'
+    jmp .print
+.no_cpuid_ext:
+    mov bl, '2'
+    jmp .print
+.long_mode_unsupported:
+    mov bl, '3'
+    jmp .print
+.couldnt_enable_a20:
+    mov bl, '4'
+    jmp .print
+.print:
+    mov ax, (0xE << 8) | 'E'
+    int 0x10
+    mov al, '1'
+    int 0x10
+    mov al, bl
+    int 0x10
     cli
     hlt
 
@@ -57,6 +77,8 @@ entry_protected:
     mov es, eax
     mov fs, eax
     mov gs, eax
+
+    mov bp, sp
 
     jmp core
 

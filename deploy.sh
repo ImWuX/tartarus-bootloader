@@ -1,48 +1,65 @@
 #!/bin/bash
 POSITIONAL_ARGS=()
 
-COLL="\e[96m"
+VERSION="1.2"
+
+COLI="\e[96m"
 COLE="\e[31m"
+COLB="\e[1m"
+COLU="\e[4m"
 COLR="\e[0m"
 
+log() {
+    echo -e "$@"
+}
+log_important() {
+    echo -e ""$COLI"$@"$COLR"" >&3
+}
+log_error() {
+    echo -e ""$COLE"$@"$COLR"" >&3
+}
+
 TARGET="amd64-bios"
+BOOT="disk"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         -t|--target)
             TARGET="$2"
             shift
+            ;;
+        -b|--boot)
+            BOOT="$2"
             shift
             ;;
         --create-image)
             CREATEIMAGE="$2"
             shift
-            shift
             ;;
         -v|--verbose)
             VERBOSE=1
-            shift
             ;;
         -?|--help)
-            echo -e "| "$COLL"Tartarus Deployer v1.1"$COLR""
-            echo -e "| Usage: ./deploy [options] <image>"
-            echo -e "| Options:"
-            echo -e "| \t-t, --target <target>\n| \t\t\tSpecify target. Supported targets: amd64-bios, amd64-uefi\n| "
-            echo -e "| \t-v, --verbose\n| \t\t\tTurn off log suppression for everything\n| "
-            echo -e "| \t--create-image\n| \t\t\tCreate a 64MB raw disk image. Supported types: fat32\n| "
-            echo -e "| \t-?, --help\n| \t\t\tDisplay usage help for Tartarus Deployer\n| "
+            log "┌────────────────────────────────────────────────────────────────────────"
+            log "│ "$COLI"Tartarus Deployer v$VERSION"$COLR""
+            log "│ Usage: ./deploy [options] <image>"
+            log "│ Options:"
+            log "│ \t-t, --target <target>\n│ \t\t\tSpecify target. Supported targets: "$COLU"amd64-bios"$COLR", amd64-uefi\n│ "
+            log "│ \t-b, --boot <type>\n│ \t\t\tBoot type. Supported types: "$COLU"disk"$COLR"\n│ "
+            log "│ \t--create-image <sector count>\n│ \t\t\tOverride the target image with a fresh image of specified size\n│ "
+            log "│ \t-v, --verbose\n│ \t\t\tTurn off log suppression for everything\n│ "
+            log "│ \t-?, --help\n│ \t\t\tDisplay usage help for Tartarus Deployer\n│ "
             exit 1
-            shift
             ;;
         -*|--*)
-            echo "Unknown option ($1)"
+            echo "Unknown option \"$1\""
             exit 1
             ;;
         *)
             POSITIONAL_ARGS+=("$1") # save positional arg
-            shift # past argument
             ;;
     esac
+    shift
 done
 
 set -- "${POSITIONAL_ARGS[@]}"
@@ -52,57 +69,84 @@ if [ -z "$VERBOSE" ]; then
     exec &>/dev/null
 fi
 
-echo -e ""$COLL"TARGET=$TARGET\e[0m" >&3
+command -v make >/dev/null 2>&1 || { log_error "Missing dependency: make"; exit 1; }
+command -v mcopy >/dev/null 2>&1 || { log_error "Missing dependency: mtools/mcopy"; exit 1; }
+command -v mmd >/dev/null 2>&1 || { log_error "Missing dependency: mtools/mmd"; exit 1; }
+command -v dd >/dev/null 2>&1 || { log_error "Missing dependency: coreutils/dd"; exit 1; }
+command -v sgdisk >/dev/null 2>&1 || { log_error "Missing dependency: sgdisk"; exit 1; }
+
+log_important "TARGET=$TARGET"
 
 if [ -n "$1" ]; then
     IMAGE=$(realpath $1)
 
     if [ -n "$CREATEIMAGE" ]; then
-        case "$CREATEIMAGE" in
-            fat32)
-                echo -e ""$COLL"Creating fat32 image (64mb)"$COLR"" >&3
-                dd if=/dev/zero of=$IMAGE bs=512 count=131072
-                mkfs.fat -F 32 -n "MAIN_DRIVE" $IMAGE
-                ;;
-            *)
-                echo -e ""$COLE"Unknown image type ($CREATEIMAGE)"$COLR"" >&3
-                exit 1
-                ;;
-        esac
+        # Create a fresh image
+        log_important "Creating a new image"
+        dd if=/dev/zero of=$IMAGE bs=512 count=$CREATEIMAGE
     fi
 
     cd "$(dirname "$0")"
     if [ $? -eq 0 ]; then
         case $TARGET in
             amd64-bios)
-                echo -e ""$COLL"Making bootsector"$COLR"" >&3
-                make -C bios/boot boot.bin
-
-                echo -e ""$COLL"Writing bootsector to image"$COLR"" >&3
-                dd if=bios/boot/boot.bin of=$IMAGE ibs=422 seek=90 obs=1 conv=notrunc
-                perl -e 'print pack("ccc",(0xEB,0x58,0x90))' | dd of=$IMAGE bs=1 seek=0 count=3 conv=notrunc
-
-                echo -e ""$COLL"Making core"$COLR"" >&3
+                # Build the core
+                log_important "Making core"
                 make -C core TARGET="$TARGET"
 
-                if [ "$CREATEIMAGE" == "fat32" ]; then
-                    echo -e ""$COLL"Writing Tartarus into fat32 filesystem"$COLR"" >&3
-                    mcopy -i $IMAGE core/tartarus.sys "::tartarus.sys"
-                fi
+                case $BOOT in
+                    disk)
+                        # Build the bootsector
+                        log_important "Building mbr bootsector"
+                        make -C bios disk/mbr.bin
 
-                echo -e ""$COLL"Cleaning up"$COLR"" >&3
-                make -C bios/boot clean
+                        # Create a new partition table
+                        CORE_SIZE=$(wc -c core/tartarus.sys | awk '{print $1}')
+                        CORE_SIZE=$((($CORE_SIZE + 512) / 512))
+
+                        sgdisk -n=1:2048:$((2048 + $CORE_SIZE)) $IMAGE
+                        sgdisk -t=1:{54524154-5241-5355-424F-4F5450415254} $IMAGE
+                        sgdisk -A=1:set:0
+                        sgdisk -N=2 $IMAGE
+
+                        # Write the bootsector to the image
+                        log_important "Writing bootsector to image"
+                        dd if=bios/disk/mbr.bin of=$IMAGE ibs=440 seek=0 obs=1 conv=notrunc
+
+                        # Write core to the image
+                        dd if=core/tartarus.sys of=$IMAGE seek=2048 bs=512 conv=notrunc
+                        ;;
+                    *)
+                        log_error "Unsupported boot type ($BOOT)"
+                        exit 1
+                        ;;
+                esac
+
+                # Clean up
+                log_important "Cleaning up"
+                make -C bios clean
                 make -C core clean TARGET="$TARGET"
                 ;;
             amd64-uefi64)
+                case $BOOT in
+                    disk)
+                        ;;
+                    *)
+                        log_error "Unsupported boot type ($BOOT)"
+                        exit 1
+                        ;;
+                esac
+                # Clone limine-efi if needed
                 if [ ! -d "limine-efi" ]; then
                     git clone https://github.com/limine-bootloader/limine-efi.git limine-efi --depth=1
                 fi
 
-                echo -e ""$COLL"Making core"$COLR"" >&3
+                # Build the core
+                log_important "Making core"
                 make -C core tartarus.efi TARGET="$TARGET" EFIDIR="$(realpath limine-efi)"
 
-                echo -e ""$COLL"Writing image"$COLR"" >&3
+                # Write it to the image
+                log_important "Writing image"
                 dd if=/dev/zero of=$IMAGE bs=512 count=131072
                 parted -s $IMAGE mklabel gpt
                 parted -s $IMAGE mkpart ESP fat32 2048s 100%
@@ -116,18 +160,19 @@ if [ -n "$1" ]; then
                 dd if=tmp.img of=$IMAGE bs=512 count=100000 seek=2048 conv=notrunc
                 rm -f tmp.img
 
-                echo -e ""$COLL"Cleaning up"$COLR"" >&3
+                # Clean up
+                log_important "Cleaning up"
                 make -C core clean TARGET="$TARGET" EFIDIR="$(realpath limine-efi)"
                 ;;
             *)
-                echo -e ""$COLE"Unsupported target ($TARGET)"$COLR""
+                log_error "Unsupported target ($TARGET)"
                 exit 1
                 ;;
         esac
     else
-        echo -e ""$COLE"Make failed. Cleaning up"$COLR"" >&3
+        log_error "Make failed. Cleaning up"
         make clean
     fi
 else
-    echo -e ""$COLE"Missing destination image"$COLR"" >&3
+    log_error "Missing target image"
 fi
