@@ -7,7 +7,6 @@
 #include <memory/vmm.h>
 #include <memory/heap.h>
 #include <disk.h>
-#include <partition.h>
 #include <protocols/handoff.h>
 
 #ifdef __UEFI
@@ -61,7 +60,11 @@ EFI_HANDLE g_imagehandle;
             (uint64_t) disk->sector_size,
             (uint64_t) disk->writable
         );
-        partition_get(disk);
+        disk_part_t *partition = disk->partitions;
+        while(partition) {
+            log("    >> Partition { LBA: %x, Size: %x }\n", partition->lba, partition->size);
+            partition = partition->next;
+        }
         disk = disk->next;
     }
 

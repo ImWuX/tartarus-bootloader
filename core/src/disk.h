@@ -6,6 +6,13 @@
 #include <efi.h>
 #endif
 
+typedef struct disk_part {
+    struct disk *disk;
+    uint64_t lba;
+    uint64_t size;
+    struct disk_part *next;
+} disk_part_t;
+
 typedef struct disk {
 #if defined __BIOS && defined __AMD64
     uint8_t drive_number;
@@ -16,6 +23,7 @@ typedef struct disk {
     uint64_t sector_count;
     uint16_t sector_size;
     bool writable;
+    struct disk_part *partitions;
     struct disk *next;
 } disk_t;
 
