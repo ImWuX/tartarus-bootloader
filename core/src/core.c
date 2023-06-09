@@ -6,7 +6,7 @@
 #include <memory/pmm.h>
 #include <memory/vmm.h>
 #include <memory/heap.h>
-#include <disk.h>
+#include <drivers/disk.h>
 #include <drivers/acpi.h>
 
 #ifdef __UEFI
