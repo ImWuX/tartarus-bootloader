@@ -8,6 +8,8 @@
 #include <memory/heap.h>
 #include <drivers/disk.h>
 #include <drivers/acpi.h>
+#include <drivers/lapic.h>
+#include <smp.h>
 
 #ifdef __UEFI
 EFI_SYSTEM_TABLE *g_st;
@@ -50,9 +52,12 @@ EFI_HANDLE g_imagehandle;
     }
 
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
-    log(">> RSDP: %x\n", (uint64_t) rsdp);
+    if(!rsdp) log_panic("CORE", "Could not locate RSDP");
+
+    if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
     acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
-    log(">> MADT: %x\n", (uint64_t) madt);
+    if(!madt) log_panic("CORE", "No MADT table present");
+    smp_initialize_aps(madt);
 
     vmm_initialize();
 
