@@ -1,4 +1,5 @@
 extern core
+extern gdt.descriptor
 
 bits 16
 section .entry
@@ -44,7 +45,7 @@ entry_real:
     or eax, 1                               ; Set protected mode bit
     mov cr0, eax
 
-    jmp CODE_SEGMENT32:entry_protected      ; Long jump into protected gdt segment
+    jmp 0x18:entry_protected                ; Far jump into protected gdt segment
 
 error:
 .no_cpuid:
@@ -71,7 +72,7 @@ error:
 
 bits 32
 entry_protected:
-    mov eax, DATA_SEGMENT32                 ; Reset all segments
+    mov eax, 0x20                           ; Reset all segments
     mov ds, eax
     mov ss, eax
     mov es, eax
@@ -83,48 +84,6 @@ entry_protected:
     jmp core
 
 bits 16
-;
-; GDT
-;
-gdt:
-.null:
-    dd 0
-    dd 0
-.code32:
-    dw 0xFFFF
-    dw 0x0000
-    db 0x00
-    db 10011010b
-    db 11001111b
-    db 0x00
-.data32:
-    dw 0xFFFF
-    dw 0x0000
-    db 0x00
-    db 10010010b
-    db 11001111b
-    db 0x00
-.code16:
-    dw 0xFFFF
-    dw 0x0000
-    db 0x00
-    db 10011010b
-    db 00000000b
-    db 0x00
-.data16:
-    dw 0xFFFF
-    dw 0x0000
-    db 0x00
-    db 10010010b
-    db 00000000b
-    db 0x00
-.descriptor:
-    dw .descriptor - .null - 1
-    dd .null
-    dd 0
-
-CODE_SEGMENT32 equ gdt.code32 - gdt.null
-DATA_SEGMENT32 equ gdt.data32 - gdt.null
 
 KB_CMD equ 0x64
 KB_DATA equ 0x60

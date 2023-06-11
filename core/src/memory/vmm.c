@@ -52,11 +52,10 @@ void map_region(void *map, uint64_t paddr, uint64_t vaddr, uint64_t length) {
     }
 }
 
-void vmm_initialize() {
 #ifdef __AMD64
+void *vmm_initialize() {
     void *map = pmm_alloc_page();
     memset(map, 0, PAGE_SIZE);
-#endif
 
     // Map 2nd page to 4GB
     map_region(map, PAGE_SIZE, PAGE_SIZE, FOUR_GB - PAGE_SIZE);
@@ -64,7 +63,9 @@ void vmm_initialize() {
 
     // TODO: Map memory map entries past 4GB
 
-#if defined __BIOS && defined __AMD64
+#if defined __BIOS
     asm volatile("mov %0, %%cr3" : : "r" (map));
 #endif
+    return map;
 }
+#endif

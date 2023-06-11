@@ -1,13 +1,5 @@
 bits 32
 
-CODE_SEGMENT32 equ 0x8
-DATA_SEGMENT32 equ 0x10
-CODE_SEGMENT16 equ 0x18
-DATA_SEGMENT16 equ 0x20
-
-extern gdt_set_real
-extern gdt_set_protected
-
 global int_exec
 int_exec:
     mov al, byte [esp + 4]
@@ -25,11 +17,11 @@ int_exec:
     push edi
     push ebp
 
-    jmp CODE_SEGMENT16:.realseg                 ; Jump to real mode segment
+    jmp 0x8:.realseg                            ; Jump to real mode segment
 
 .realseg:
 bits 16
-    mov ax, DATA_SEGMENT16                      ; Load 16bit data segment
+    mov ax, 0x10                                ; Load 16bit data segment
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -93,11 +85,11 @@ bits 16
     or eax, 1                                   ; Enable protected mode
     mov cr0, eax
 
-    jmp CODE_SEGMENT32:.protectedseg            ; Jump to protected segment
+    jmp 0x18:.protectedseg                      ; Jump to protected segment
 
 .protectedseg:
 bits 32
-    mov eax, DATA_SEGMENT32                     ; Load 32bit data segment
+    mov eax, 0x20                               ; Load 32bit data segment
 	mov ds, eax
 	mov es, eax
 	mov fs, eax

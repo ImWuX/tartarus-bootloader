@@ -1,6 +1,8 @@
 #ifndef MEMORY_VMM
 #define MEMORY_VMM
 
-void vmm_initialize();
+#ifdef __AMD64
+void *vmm_initialize();
+#endif
 
 #endif

@@ -16,6 +16,7 @@ case $@ in
             -D ./log.txt -d int \
             -M smm=off \
             -k en-us \
+            -serial file:/dev/stdout \
             -monitor stdio
         ;;
     uefi)
@@ -36,6 +37,7 @@ case $@ in
             -D ./log.txt -d int \
             -M smm=off \
             -k en-us \
+            -serial file:/dev/stdout \
             -monitor stdio
         ;;
 esac
