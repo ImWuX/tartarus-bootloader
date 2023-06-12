@@ -1,5 +1,5 @@
 extern core
-extern gdt.descriptor
+extern g_gdtr
 
 bits 16
 section .entry
@@ -39,7 +39,7 @@ entry_real:
     jnc error.couldnt_enable_a20
 
     cli
-    lgdt [gdt.descriptor]                   ; Load GDT
+    lgdt [g_gdtr]                           ; Load GDT
 
     mov eax, cr0
     or eax, 1                               ; Set protected mode bit

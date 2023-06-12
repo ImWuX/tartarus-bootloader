@@ -21,9 +21,9 @@ uint8_t lapic_bsp() {
 }
 
 void lapic_write(uint32_t reg, uint32_t value) {
-    *(volatile uint32_t *) (uint32_t) ((msr_read(MSR_LAPIC_BASE) & MSR_LAPIC_BASE_MASK) + reg) = value;
+    *(volatile uint32_t *) (uintptr_t) ((msr_read(MSR_LAPIC_BASE) & MSR_LAPIC_BASE_MASK) + reg) = value;
 }
 
 uint32_t lapic_read(uint32_t reg) {
-    return *(volatile uint32_t *) (uint32_t) ((msr_read(MSR_LAPIC_BASE) & MSR_LAPIC_BASE_MASK) + reg);
+    return *(volatile uint32_t *) (uintptr_t) ((msr_read(MSR_LAPIC_BASE) & MSR_LAPIC_BASE_MASK) + reg);
 }

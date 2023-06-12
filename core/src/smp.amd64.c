@@ -5,6 +5,7 @@
 #include <libc.h>
 #include <log.h>
 #include <memory/pmm.h>
+#include <gdt.h>
 
 #define CYCLES_10MIL 10000000
 #define PAGE_SIZE 0x1000
@@ -47,6 +48,8 @@ typedef struct {
     uint32_t pml4;
     uint64_t wait_on_address;
     uint32_t heap;
+    uint16_t gdtr_limit;
+    uint32_t gdtr_base;
 } __attribute__((packed)) boot_info_t;
 
 typedef int SYMBOL[];
@@ -67,6 +70,8 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
 
     boot_info_t *boot_info = (boot_info_t *) (reserved_page + apinit_size);
     boot_info->pml4 = (uint32_t) (uintptr_t) pml4;
+    boot_info->gdtr_limit = g_gdtr.limit;
+    boot_info->gdtr_base = (uint32_t) g_gdtr.base;
 
     uint32_t count = 0;
     while(count < madt->sdt_header.length) {

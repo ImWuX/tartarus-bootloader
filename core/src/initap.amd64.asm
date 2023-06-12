@@ -1,4 +1,3 @@
-extern gdt.descriptor
 global g_initap_start
 global g_initap_end
 
@@ -14,7 +13,7 @@ bits 16
     mov ebx, cs
     shl ebx, 4                                              ; Calculate the offset of the loaded code (cs * 0x10)
 
-    o32 lgdt [gdt.descriptor]                               ; Load GDT
+    o32 lgdt [off(boot_info.gdtr)]                          ; Load GDT
 
     lea eax, [off(.protected)]
     mov dword [off(.far_jmp32)], eax                        ; Set far jump offset
@@ -107,3 +106,6 @@ boot_info:
     .pml4: dd 0
     .wait_on_address: dq 0
     .heap: dd 0
+    .gdtr:
+        dw 0
+        dd 0

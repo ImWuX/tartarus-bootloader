@@ -13,15 +13,6 @@
 #endif
 #include <smp.h>
 
-#if defined __BIOS && defined __AMD64
-static void testap() {
-    uint8_t value = 'X';
-    uint16_t port = 0x3F8;
-    asm volatile("outb %0, %1" : : "a" (value), "Nd" (port));
-    while(true) asm volatile("hlt");
-}
-#endif
-
 #ifdef __UEFI
 EFI_SYSTEM_TABLE *g_st;
 EFI_HANDLE g_imagehandle;
@@ -50,20 +41,22 @@ EFI_HANDLE g_imagehandle;
 #endif
     disk_initialize();
 
-    disk_t *disk = g_disks;
-    while(disk) {
-        log(">> Disk %i { SectorCount: %x, SectorSize: %i, Writable: %i }\n",
-            (uint64_t) disk->id,
-            (uint64_t) disk->sector_count,
-            (uint64_t) disk->sector_size,
-            (uint64_t) disk->writable
-        );
-        disk_part_t *partition = disk->partitions;
-        while(partition) {
-            log("    >> Partition { LBA: %x, Size: %x }\n", partition->lba, partition->size);
-            partition = partition->next;
+    {
+        disk_t *disk = g_disks;
+        while(disk) {
+            log(">> Disk %i { SectorCount: %x, SectorSize: %i, Writable: %i }\n",
+                (uint64_t) disk->id,
+                (uint64_t) disk->sector_count,
+                (uint64_t) disk->sector_size,
+                (uint64_t) disk->writable
+            );
+            disk_part_t *partition = disk->partitions;
+            while(partition) {
+                log("    >> Partition { LBA: %x, Size: %x }\n", partition->lba, partition->size);
+                partition = partition->next;
+            }
+            disk = disk->next;
         }
-        disk = disk->next;
     }
 
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
