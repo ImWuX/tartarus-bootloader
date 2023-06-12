@@ -21,6 +21,8 @@ bool pmm_convert(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, 
 void *pmm_alloc_ext(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, pmm_area_t area, size_t page_count);
 void *pmm_alloc(pmm_area_t area, size_t page_count);
 void *pmm_alloc_page(pmm_area_t area);
+void pmm_free(void *address, size_t page_count);
+void pmm_free_page(void *address);
 
 void pmm_map();
 

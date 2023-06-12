@@ -42,7 +42,7 @@ acpi_sdt_header_t *acpi_find_table(acpi_rsdp_t *rsdp, const char *signature) {
 #define RSDP_IDENTIFIER 0x2052545020445352 // "RSD PTR "
 #define RSDP_SIZE 20
 
-#define BIOS_AREA 0x0400
+#define BIOS_AREA 0x400
 #define BIOS_AREA_EBDA 0xE
 
 static uintptr_t scan_region(uintptr_t start, uintptr_t end) {

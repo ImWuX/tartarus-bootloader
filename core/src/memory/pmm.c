@@ -233,6 +233,14 @@ void pmm_map() {
     }
 }
 
+void pmm_free(void *address, size_t page_count) {
+    if(pmm_convert(TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, TARTARUS_MEMAP_TYPE_USABLE, (uint64_t) (uintptr_t) address, (uint64_t) page_count * PAGE_SIZE)) log_panic("PMM", "Cannot free an unallocated area");
+}
+
+void pmm_free_page(void *address) {
+    pmm_free(address, 1);
+}
+
 #if defined __AMD64 && defined __BIOS
 #define E820_MAX 512
 

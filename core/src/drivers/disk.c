@@ -81,7 +81,7 @@ static void initialize_gpt_partitions(disk_t *disk, gpt_header_t *header) {
     } else {
         log_warning("PARTITION", "Ignoring drive %x. Read failed.", (uint64_t) disk->id);
     }
-    // TODO: Free buf
+    pmm_free(buf, buf_size);
 }
 
 static void initialize_partitions(disk_t *disk) {
@@ -99,7 +99,7 @@ static void initialize_partitions(disk_t *disk) {
     } else {
         log_warning("PARTITION", "Ignoring drive %x. Read failed.", (uint64_t) disk->id);
     }
-    // TODO: Free buf
+    pmm_free(buf, buf_size);
 }
 
 #if defined __BIOS && defined __AMD64
@@ -143,18 +143,19 @@ void disk_initialize() {
         disk->sector_size = params.sector_size; // TODO: The sector size provided by BIOS is unreliable. We can manually figure out the size by reading into a filled buffer and empty buffer and figuring out where the last modified byte is.
         disk->sector_count = params.abs_sectors;
 
-        int buf_pages = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
-        void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_pages);
-        if(disk_read_sector(disk, 0, buf_pages, buf)) {
+        int buf_size = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
+        if(disk_read_sector(disk, 0, buf_size, buf)) {
             heap_free(disk);
             continue;
         }
-        disk->writable = !disk_write_sector(disk, 0, buf_pages, buf);
+        disk->writable = !disk_write_sector(disk, 0, buf_size, buf);
         disk->partitions = 0;
         initialize_partitions(disk);
         disk->next = g_disks;
         g_disks = disk;
-        // TODO: Free buf
+
+        pmm_free(buf, buf_size);
     }
 }
 
