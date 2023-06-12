@@ -24,5 +24,6 @@ SECTIONS
         *(COMMON)
     }
 
+    . = ALIGN(0x1000);
     __tartarus_end = .;
 }

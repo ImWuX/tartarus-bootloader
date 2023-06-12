@@ -59,7 +59,7 @@ typedef struct {
 static void initialize_gpt_partitions(disk_t *disk, gpt_header_t *header) {
     uint32_t array_sectors = (header->partition_array_count * header->partition_entry_size + disk->sector_size - 1) / disk->sector_size;
     uint32_t buf_size = (array_sectors * disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    void *buf = pmm_alloc_pages(buf_size, PMM_AREA_CONVENTIONAL);
+    void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
     if(!disk_read_sector(disk, header->partition_array_lba, array_sectors, buf)) {
         for(uint32_t i = 0; i < header->partition_array_count; i++) {
             gpt_entry_t *entry = (gpt_entry_t *) ((uintptr_t) buf + i * header->partition_entry_size);
@@ -86,7 +86,7 @@ static void initialize_gpt_partitions(disk_t *disk, gpt_header_t *header) {
 
 static void initialize_partitions(disk_t *disk) {
     int buf_size = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    void *buf = pmm_alloc_pages(buf_size, PMM_AREA_CONVENTIONAL);
+    void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
 
     if(!disk_read_sector(disk, 0, 1, buf)) {
         mbr_t *mbr = (mbr_t *) ((uintptr_t) buf + 440);
@@ -144,7 +144,7 @@ void disk_initialize() {
         disk->sector_count = params.abs_sectors;
 
         int buf_pages = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
-        void *buf = pmm_alloc_pages(buf_pages, PMM_AREA_CONVENTIONAL);
+        void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_pages);
         if(disk_read_sector(disk, 0, buf_pages, buf)) {
             heap_free(disk);
             continue;

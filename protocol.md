@@ -2,16 +2,16 @@
 The Tartarus Boot Protocol describes the state that the Tartarus bootloader will leave the kernel in.
 
 
-CPU State
+### CPU State
 - A20 line enabled
 
 
-Memory Map
+### Memory Map
 - Sorted by `base`
-- `USABLE`/`BOOT_RECLAIMABLE` entries are...
-    - Always page aligned
-    - Never overlapping with other entries
-- 0 - 0x1000 is never `USABLE`
+- `USABLE` / `BOOT_RECLAIMABLE` entries are strict entries. In addition to the normal properties, strict entries are also guaranteed to
+    - Always be page aligned
+    - Never overlap with other entries
+- The first page is never `USABLE` (for example in amd64 0 - 0x1000 is never usable)
 
 
 # This state is described by UEFI

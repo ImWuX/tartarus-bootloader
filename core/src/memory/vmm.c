@@ -31,7 +31,7 @@ static void map_page(uint64_t *pml4, uint64_t paddr, uint64_t vaddr, bool large)
             current_table = (uint64_t *) (uintptr_t) (entry & PT_ADDRESS_MASK);
             continue;
         }
-        uint64_t *new_table = pmm_alloc_page();
+        uint64_t *new_table = pmm_alloc_page(PMM_AREA_MAX);
         memset(new_table, 0, PAGE_SIZE);
         current_table[indexes[i]] = ((uint64_t) (uintptr_t) new_table & PT_ADDRESS_MASK) | PT_PRESENT | PT_RW;
         current_table = new_table;
@@ -54,7 +54,7 @@ void map_region(void *map, uint64_t paddr, uint64_t vaddr, uint64_t length) {
 
 #ifdef __AMD64
 void *vmm_initialize() {
-    void *map = pmm_alloc_page();
+    void *map = pmm_alloc_page(PMM_AREA_MAX);
     memset(map, 0, PAGE_SIZE);
 
     // Map 2nd page to 4GB

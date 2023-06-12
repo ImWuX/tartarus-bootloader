@@ -31,12 +31,21 @@ EFI_HANDLE g_imagehandle;
 #endif
 
 #if defined __BIOS && defined __AMD64
+typedef int SYMBOL[];
+
+extern SYMBOL __tartarus_start;
+extern SYMBOL __tartarus_end;
+
 [[noreturn]] void core() {
     fb_initialize(1920, 1080);
 #endif
     pmm_initialize();
 #ifdef __AMD64
-    void *smp_rsv_page = pmm_alloc_pages(1, PMM_AREA_CONVENTIONAL); // Allocate a page early to get one lower than 0x100000
+#ifdef __BIOS
+    pmm_convert(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, 0x6000, 0x1000); // Protect initial stack
+    pmm_convert(TARTARUS_MEMAP_TYPE_USABLE, TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, (uintptr_t) __tartarus_start, (uintptr_t) __tartarus_end - (uintptr_t) __tartarus_start);
+#endif
+    void *smp_rsv_page = pmm_alloc_page(PMM_AREA_CONVENTIONAL); // Allocate a page early to get one lower than 0x100000
     if((uintptr_t) smp_rsv_page >= 0x100000) log_panic("CORE", "Unable to reserve a page for SMP");
 #endif
     disk_initialize();

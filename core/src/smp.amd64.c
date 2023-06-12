@@ -65,7 +65,7 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
     if(apinit_size + sizeof(boot_info_t) > PAGE_SIZE) log_panic("SMP", "Unable to fit initap into a page");
     memcpy((void *) reserved_page, (void *) g_initap_start, apinit_size);
 
-    void *woa_page = pmm_alloc_page();
+    void *woa_page = pmm_alloc_page(PMM_AREA_MAX);
     memset(woa_page, 0, PAGE_SIZE);
 
     boot_info_t *boot_info = (boot_info_t *) (reserved_page + apinit_size);
@@ -83,7 +83,7 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
                 boot_info->init = 0;
                 boot_info->apic_id = lapic_record->lapic_id;
                 boot_info->wait_on_address = (uint64_t) ((uintptr_t) woa_page + boot_info->apic_id * 8);
-                boot_info->heap = (uint32_t) (uintptr_t) pmm_alloc_pages(4, PMM_AREA_EXTENDED) + PAGE_SIZE * 4;
+                boot_info->heap = (uint32_t) (uintptr_t) pmm_alloc(PMM_AREA_EXTENDED, 4) + PAGE_SIZE * 4;
 
                 lapic_write(LAPIC_REG_ICR2, lapic_record->lapic_id << 24);
                 lapic_write(LAPIC_REG_ICR1, ICR_ASSERT | ICR_INIT);
