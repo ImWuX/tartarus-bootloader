@@ -46,7 +46,7 @@ endif
 # FLAGS
 DEFINES =
 ASMFLAGS = -isrc -i..
-CFLAGS = -Isrc -I.. -std=gnu2x -O2 -ffreestanding -Wall -Wextra -Wshadow -Wvla -Wno-unused-variable -fno-stack-protector -fno-stack-check -fno-omit-frame-pointer -fno-strict-aliasing -fno-lto
+CFLAGS = -Isrc -I.. -std=gnu2x -O2 -ffreestanding -Wall -Wextra -Wshadow -Wvla -Wno-unused-variable -fno-stack-protector -fno-stack-check -fno-omit-frame-pointer -fno-strict-aliasing -fno-lto --param min-pagesize=0
 LDFLAGS = -nostdlib -static -z noexecstack
 
 # FLAGS ( amd64 )

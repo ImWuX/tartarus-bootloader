@@ -183,22 +183,40 @@ bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *d
 }
 
 bool disk_write_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *src) {
-    // TODO: Rewrite like the read to write sectors one-by-one
     disk_address_packet_t dap = {
         .size = sizeof(disk_address_packet_t),
-        .sector_count = sector_count,
-        .disk_lba = lba,
-        .memory_segment = int_16bit_segment(src),
-        .memory_offset = int_16bit_offset(src)
+        .sector_count = 1,
     };
     int_regs_t regs = {
-        .eax = (0x43 << 8) | 1,
         .edx = disk->id,
         .ds = int_16bit_segment(&dap),
         .esi = int_16bit_offset(&dap)
     };
-    int_exec(0x13, &regs);
-    return regs.eflags & EFLAGS_CF;
+    for(uint16_t i = 0; i < sector_count; i++) {
+        dap.disk_lba = lba;
+        dap.memory_segment = int_16bit_segment(src);
+        dap.memory_offset = int_16bit_offset(src);
+        regs.eax = (0x43 << 8) | 1;
+        int_exec(0x13, &regs);
+        if(regs.eflags & EFLAGS_CF) return true;
+        lba++;
+        src += disk->sector_size;
+    }
+    return false;
+}
+
+void disk_read(disk_part_t *part, uint64_t offset, uint64_t count, void *dest) {
+    uint64_t lba_offset = offset / part->disk->sector_size;
+    uint64_t sect_offset = offset % part->disk->sector_size;
+    uint64_t sect_count = (sect_offset + count + part->disk->sector_size - 1) / part->disk->sector_size;
+
+    uint64_t buf_size = (part->disk->sector_size * sect_count + PAGE_SIZE - 1) / PAGE_SIZE;
+    void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
+
+    if(disk_read_sector(part->disk, part->lba + lba_offset, sect_count, buf)) log_panic("DISK", "Read failed");
+    memcpy(dest, (void *) (buf + sect_offset), count);
+
+    pmm_free(buf, buf_size);
 }
 #endif
 

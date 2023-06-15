@@ -1,7 +1,6 @@
 global memcpy
 global memset
 global memmove
-global memcmp
 
 %ifdef __UEFI64
 memcpy:
@@ -16,17 +15,6 @@ memset:
     mov rcx, rdx
     rep stosb
     pop rax
-    ret
-
-memcmp:
-    mov rcx, rdx
-    repe cmpsb
-    xor rax, rax
-    je .ret
-    mov al, byte [rdi - 1]
-    sub al, byte [rsi - 1]
-    movsx rax, al
-.ret:
     ret
 
 memmove:
@@ -65,23 +53,6 @@ memset:
     rep stosb
     mov eax, edx
     pop edi
-    ret
-
-memcmp:
-    push esi
-    push edi
-    mov edi, dword [esp + 12]
-    mov esi, dword [esp + 16]
-    mov ecx, dword [esp + 20]
-    repe cmpsb
-    xor eax, eax
-    je .ret
-    mov al, byte [edi - 1]
-    sub al, byte [esi - 1]
-    movsx eax, al
-.ret:
-    pop edi
-    pop esi
     ret
 
 memmove:

@@ -2,12 +2,14 @@
 #include <tartarus.h>
 #include <stdint.h>
 #include <log.h>
+#include <libc.h>
 #include <graphics/fb.h>
 #include <memory/pmm.h>
 #include <memory/vmm.h>
 #include <memory/heap.h>
 #include <drivers/disk.h>
 #include <drivers/acpi.h>
+#include <fs/fat.h>
 #ifdef __AMD64
 #include <drivers/lapic.h>
 #endif
@@ -50,24 +52,6 @@ extern SYMBOL __tartarus_end;
 #endif
     disk_initialize();
 
-    {
-        disk_t *disk = g_disks;
-        while(disk) {
-            log(">> Disk %i { SectorCount: %x, SectorSize: %i, Writable: %i }\n",
-                (uint64_t) disk->id,
-                (uint64_t) disk->sector_count,
-                (uint64_t) disk->sector_size,
-                (uint64_t) disk->writable
-            );
-            disk_part_t *partition = disk->partitions;
-            while(partition) {
-                log("    >> Partition { LBA: %x, Size: %x }\n", partition->lba, partition->size);
-                partition = partition->next;
-            }
-            disk = disk->next;
-        }
-    }
-
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
@@ -78,6 +62,31 @@ extern SYMBOL __tartarus_end;
     if(!madt) log_panic("CORE", "No MADT table present");
     uint64_t *woa = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, pml4);
 #endif
+
+    disk_t *disk = g_disks;
+    while(disk) {
+        log(">> Disk %i { SectorCount: %x, SectorSize: %i, Writable: %i }\n",
+            (uint64_t) disk->id,
+            (uint64_t) disk->sector_count,
+            (uint64_t) disk->sector_size,
+            (uint64_t) disk->writable
+        );
+        disk_part_t *partition = disk->partitions;
+        while(partition) {
+            fat_info_t *fat_info = fat_initialize(partition);
+            log("    >> Partition { LBA: %x, Size: %x", partition->lba, partition->size);
+            if(fat_info) log(", Fat: %i", fat_info->type);
+            log(" }\n");
+            if(fat_info) {
+                
+                heap_free(fat_info);
+            }
+            partition = partition->next;
+        }
+        disk = disk->next;
+    }
+
+    log("NO PROTOCOLS ACTIVE!\n");
 
     // SystemTable->BootServices->ExitBootServices(ImageHandle, map_key);
     while(true);

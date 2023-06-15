@@ -34,7 +34,7 @@ static void delete(heap_entry_t *entry) {
 static heap_entry_t *alloc(int pages) {
     heap_entry_t *new_entry = pmm_alloc(PMM_AREA_MAX, pages);
     new_entry->free = true;
-    new_entry->size = PAGE_SIZE - sizeof(heap_entry_t);
+    new_entry->size = pages * PAGE_SIZE - sizeof(heap_entry_t);
     new_entry->next = g_heap;
     g_heap = new_entry;
     return new_entry;

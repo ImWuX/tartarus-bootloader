@@ -36,6 +36,10 @@ while [[ $# -gt 0 ]]; do
             CREATEIMAGE="$2"
             shift
             ;;
+        --basedir)
+            BASEDIR="$2"
+            shift
+            ;;
         -v|--verbose)
             VERBOSE=1
             ;;
@@ -46,6 +50,7 @@ while [[ $# -gt 0 ]]; do
             log "│ Options:"
             log "│ \t-t, --target <target>\n│ \t\t\tSpecify target. Supported targets: "$COLU"amd64-bios"$COLR", amd64-uefi\n│ "
             log "│ \t-b, --boot <type>\n│ \t\t\tBoot type. Supported types: "$COLU"disk"$COLR"\n│ "
+            log "| \t--basedir\n| \t\t\tSpecify a directory to copy over as the root directory\n|"
             log "│ \t--create-image <sector count>\n│ \t\t\tOverride the target image with a fresh image of specified size\n│ "
             log "│ \t-v, --verbose\n│ \t\t\tTurn off log suppression for everything\n│ "
             log "│ \t-?, --help\n│ \t\t\tDisplay usage help for Tartarus Deployer\n│ "
@@ -79,6 +84,7 @@ log_important "TARGET=$TARGET"
 
 if [ -n "$1" ]; then
     IMAGE=$(realpath $1)
+    BASEDIR=$(realpath $BASEDIR)
 
     if [ -n "$CREATEIMAGE" ]; then
         # Create a fresh image
@@ -106,8 +112,20 @@ if [ -n "$1" ]; then
 
                         sgdisk -n=1:2048:$((2048 + $CORE_SIZE)) $IMAGE
                         sgdisk -t=1:{54524154-5241-5355-424F-4F5450415254} $IMAGE
-                        sgdisk -A=1:set:0
-                        sgdisk -N=2 $IMAGE
+                        sgdisk -A=1:set:0 $IMAGE
+
+                        BIGPART_START=$(sgdisk -F $IMAGE)
+                        BIGPART_END=$(sgdisk -E $IMAGE)
+                        sgdisk -n=2:$BIGPART_START:$BIGPART_END $IMAGE
+                        sgdisk -t=2:{54524154-5241-5355-424F-4F5450415255} $IMAGE # GUID here is not important, can be anything really, tartarus wont care
+                        mkfs.fat -F 16 --offset $BIGPART_START $IMAGE
+                        if [ -n "$BASEDIR" ]; then
+                            BYTEOFF=$(($BIGPART_START * 512))
+                            mcopy -s -i $IMAGE@@$BYTEOFF $BASEDIR "::/root"
+                            mmove -i $IMAGE@@$BYTEOFF "::/root/*" "::/"
+                            mdeltree -i $IMAGE@@$BYTEOFF "::/root"
+                            mdir -/ -i $IMAGE@@$BYTEOFF
+                        fi
 
                         # Write the bootsector to the image
                         log_important "Writing bootsector to image"

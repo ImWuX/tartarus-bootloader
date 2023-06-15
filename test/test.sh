@@ -2,7 +2,7 @@
 case $@ in
     bios)
         rm -f test.img
-        ../deploy.sh -t amd64-bios -b disk --create-image 131072 -v test.img
+        ../deploy.sh -v -t amd64-bios -b disk --create-image 131072 --basedir basedir test.img
 
         echo -e "\e[32mRunning QEMU in VNC (BIOS)\e[0m"
         qemu-system-x86_64 \
@@ -21,7 +21,7 @@ case $@ in
         ;;
     uefi)
         rm -f test.img
-        ../deploy.sh --create-image fat32 -t amd64-uefi64 test.img -v
+        ../deploy.sh -v -t amd64-uefi64 --create-image 131072 test.img -v
 
         echo -e "\e[32mRunning QEMU in VNC (UEFI)\e[0m"
         qemu-system-x86_64 \
