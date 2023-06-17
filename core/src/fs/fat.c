@@ -26,7 +26,7 @@
 
 #define FAT_OFFSET(info) ((info)->reserved_sectors * (info)->sector_size)
 #define ROOT_OFFSET(info) (((info)->reserved_sectors + (info)->fat_count * (info)->fat_sectors) * (info)->sector_size)
-#define DATA_OFFSET(info) (((info)->reserved_sectors + (info)->fat_count * (info)->fat_sectors + (((info)->root_dir.entry_count * sizeof(directory_entry_t) + (info)->sector_size - 1) / (info)->sector_size)) * (info)->sector_size)
+#define DATA_OFFSET(info) (((info)->reserved_sectors + (info)->fat_count * (info)->fat_sectors + (((info)->type == FAT32 ? 0 : (info)->root_dir.entry_count * sizeof(directory_entry_t) + (info)->sector_size - 1) / (info)->sector_size)) * (info)->sector_size)
 
 typedef struct {
     uint8_t jmp_boot[3];
@@ -101,7 +101,6 @@ inline static uint32_t next_cluster(fat_info_t *info, uint32_t cluster) {
             next_cluster &= 0xFFFFFFF;
             break;
     }
-    if(next_cluster == 2) return cluster++;
     return next_cluster;
 }
 
@@ -110,23 +109,24 @@ inline static fat_file_t *create_file(fat_info_t *info, directory_entry_t *entry
     file->info = info;
     file->is_dir = entry->attributes & ATTR_DIRECTORY;
     file->size = entry->file_size;
-    file->cluster_number = entry->cluster_low | (entry->cluster_high << 16);
+    file->cluster_number = entry->cluster_low;
+    if(info->type == FAT32) file->cluster_number |= entry->cluster_high << 16;
     return file;
 }
 
 inline static fat_file_t *internal_dir_lookup(fat_info_t *info, uint32_t cluster, const char *name) {
     directory_entry_t *entries = heap_alloc(info->cluster_size);
-    for(int i = 0; !IS_BAD(cluster, info->type); i++) {
-        disk_read(info->partition, DATA_OFFSET(info) + i * info->cluster_size, info->cluster_size, entries);
-        for(uint16_t j = 0; j < info->cluster_size / sizeof(directory_entry_t); j++) {
-            if(IS_DIR_FREE(entries[j].name[0])) continue;
-            if(entries[j].attributes == 0xF) continue; // Ignore long names
-            if(memcmp(entries[j].name, name, 11) != 0) continue;
-            fat_file_t *file = create_file(info, &entries[j]);
+    while(!IS_END(cluster, info->type)) {
+        if(IS_BAD(cluster, info->type)) log_panic("FAT", "Bad cluster");
+        disk_read(info->partition, DATA_OFFSET(info) + (cluster - 2) * info->cluster_size, info->cluster_size, entries);
+        for(uint16_t i = 0; i < info->cluster_size / sizeof(directory_entry_t); i++) {
+            if(IS_DIR_FREE(entries[i].name[0])) continue;
+            if(entries[i].attributes == 0xF) continue; // Ignore long names
+            if(memcmp(entries[i].name, name, 11) != 0) continue;
+            fat_file_t *file = create_file(info, &entries[i]);
             heap_free(entries);
             return file;
         }
-        if(IS_END(cluster, info->type)) break;
         cluster = next_cluster(info, cluster);
     }
     heap_free(entries);
@@ -195,8 +195,8 @@ fat_info_t *fat_initialize(disk_part_t *partition) {
             info->root_dir.entry_count = bpb->root_entry_count;
             break;
         case FAT32:
-            info->root_dir.cluster_number = bpb->ext32.root_cluster;
             info->fat_sectors = bpb->ext32.fat_size32;
+            info->root_dir.cluster_number = bpb->ext32.root_cluster;
             break;
     }
     heap_free(bpb);
@@ -216,7 +216,6 @@ fat_file_t *fat_root_lookup(fat_info_t *info, const char *name) {
                 disk_read(info->partition, ROOT_OFFSET(info) + (i * sizeof(directory_entry_t)), sizeof(directory_entry_t), entry);
                 if(IS_DIR_FREE(entry->name[0])) continue;
                 if(entry->attributes == 0xF) continue; // Ignore long names
-
                 if(memcmp(entry->name, name, 11) != 0) continue;
                 fat_file_t *file = create_file(info, entry);
                 heap_free(entry);
@@ -240,21 +239,20 @@ int fat_read(fat_file_t *file, uint64_t offset, uint64_t count, void *dest) {
 
     uint32_t cluster = file->cluster_number;
     for(uint64_t i = 0; i < offset / file->info->cluster_size; i++) {
+        if(IS_BAD(cluster, file->info->type)) log_panic("FAT", "Bad cluster");
         if(IS_END(cluster, file->info->type)) return 0;
         cluster = next_cluster(file->info, cluster);
-        if(IS_BAD(cluster, file->info->type)) log_panic("FAT", "Bad cluster");
     }
     offset %= file->info->cluster_size;
 
-    while(count > 0 && cluster > 2) {
+    while(!IS_END(cluster, file->info->type)) {
+        if(IS_BAD(cluster, file->info->type)) log_panic("FAT", "Bad cluster");
         uint16_t lcount = (count < file->info->cluster_size ? count : file->info->cluster_size) - offset;
         disk_read(file->info->partition, DATA_OFFSET(file->info) + (cluster - 2) * file->info->cluster_size + offset, lcount, dest);
         count -= lcount;
         dest += lcount;
         offset = 0;
-        if(IS_END(cluster, file->info->type)) break;
         cluster = next_cluster(file->info, cluster);
-        if(IS_BAD(cluster, file->info->type)) log_panic("FAT", "Bad cluster");
     }
 
     return initial_count - count;

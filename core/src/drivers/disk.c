@@ -204,20 +204,6 @@ bool disk_write_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *
     }
     return false;
 }
-
-void disk_read(disk_part_t *part, uint64_t offset, uint64_t count, void *dest) {
-    uint64_t lba_offset = offset / part->disk->sector_size;
-    uint64_t sect_offset = offset % part->disk->sector_size;
-    uint64_t sect_count = (sect_offset + count + part->disk->sector_size - 1) / part->disk->sector_size;
-
-    uint64_t buf_size = (part->disk->sector_size * sect_count + PAGE_SIZE - 1) / PAGE_SIZE;
-    void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
-
-    if(disk_read_sector(part->disk, part->lba + lba_offset, sect_count, buf)) log_panic("DISK", "Read failed");
-    memcpy(dest, (void *) (buf + sect_offset), count);
-
-    pmm_free(buf, buf_size);
-}
 #endif
 
 #ifdef __UEFI
@@ -261,3 +247,17 @@ bool disk_write_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *
     return EFI_ERROR(disk->io->WriteBlocks(disk->io, disk->io->Media->MediaId, lba, sector_count * disk->sector_size, src));
 }
 #endif
+
+void disk_read(disk_part_t *part, uint64_t offset, uint64_t count, void *dest) {
+    uint64_t lba_offset = offset / part->disk->sector_size;
+    uint64_t sect_offset = offset % part->disk->sector_size;
+    uint64_t sect_count = (sect_offset + count + part->disk->sector_size - 1) / part->disk->sector_size;
+
+    uint64_t buf_size = (part->disk->sector_size * sect_count + PAGE_SIZE - 1) / PAGE_SIZE;
+    void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
+
+    if(disk_read_sector(part->disk, part->lba + lba_offset, sect_count, buf)) log_panic("DISK", "Read failed");
+    memcpy(dest, (void *) (buf + sect_offset), count);
+
+    pmm_free(buf, buf_size);
+}

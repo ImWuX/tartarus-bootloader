@@ -10,6 +10,7 @@
 #include <drivers/disk.h>
 #include <drivers/acpi.h>
 #include <fs/fat.h>
+#include <config.h>
 #ifdef __AMD64
 #include <drivers/lapic.h>
 #endif
@@ -52,6 +53,27 @@ extern SYMBOL __tartarus_end;
 #endif
     disk_initialize();
 
+    fat_file_t *cfg;
+    disk_t *disk = g_disks;
+    while(disk) {
+        disk_part_t *partition = disk->partitions;
+        while(partition) {
+            log(">> Partition %i on %i\n", (uint64_t) partition->id, (uint64_t) partition->disk->id);
+            fat_info_t *fat_info = fat_initialize(partition);
+            if(fat_info) {
+                log("\t> IS FAT\n");
+                cfg = config_find(fat_info);
+                if(cfg) break;
+                heap_free(fat_info);
+            }
+            partition = partition->next;
+        }
+        if(cfg) break;
+        disk = disk->next;
+    }
+
+    if(!cfg) log_panic("CORE", "Could not locate a config file");
+
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
@@ -62,29 +84,6 @@ extern SYMBOL __tartarus_end;
     if(!madt) log_panic("CORE", "No MADT table present");
     uint64_t *woa = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, pml4);
 #endif
-
-    disk_t *disk = g_disks;
-    while(disk) {
-        log(">> Disk %i { SectorCount: %x, SectorSize: %i, Writable: %i }\n",
-            (uint64_t) disk->id,
-            (uint64_t) disk->sector_count,
-            (uint64_t) disk->sector_size,
-            (uint64_t) disk->writable
-        );
-        disk_part_t *partition = disk->partitions;
-        while(partition) {
-            fat_info_t *fat_info = fat_initialize(partition);
-            log("    >> Partition { LBA: %x, Size: %x", partition->lba, partition->size);
-            if(fat_info) log(", Fat: %i", fat_info->type);
-            log(" }\n");
-            if(fat_info) {
-                
-                heap_free(fat_info);
-            }
-            partition = partition->next;
-        }
-        disk = disk->next;
-    }
 
     log("NO PROTOCOLS ACTIVE!\n");
 
