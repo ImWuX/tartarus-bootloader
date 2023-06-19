@@ -189,7 +189,7 @@ read:
     mov [DAP + 12], dword edi                               ; Upper 32bits of LBA
 
     mov eax, ebx                                            ; dividend (eax) = byte count
-    xor edx, edx                                            ; Clear edx for division // TODO: LIKELY UNEEDED; DIV SHOULD SET IT NO MATTER WHAT
+    xor edx, edx                                            ; Clear edx for division
     movzx ecx, word [sector_size]                           ; divisor (ecx) = sector size
     div ecx
     cmp edx, 0                                              ; remainder > 0

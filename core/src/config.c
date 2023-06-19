@@ -1,5 +1,6 @@
 #include "config.h"
 #include <log.h>
+#include <libc.h>
 #include <memory/heap.h>
 
 #define CONFIG1_FILE "TARTARUSCFG"
@@ -8,22 +9,27 @@
 
 static bool find_value(char *config_data, uint32_t config_data_size, const char *key, uint32_t *offset) {
     bool match = true;
+    bool key_end = false;
     uint32_t local_offset = 0;
     for(uint32_t i = 0; i < config_data_size; i++) {
         switch(config_data[i]) {
             case ' ':
             case '\t':
+                if(!key_end) match = false;
                 break;
             case '=':
-                if(!match) break;
+                if(!match || !key_end) break;
                 *offset = i + 1;
                 return false;
             case '\n':
+                key_end = false;
                 match = true;
                 local_offset = 0;
                 break;
             default:
+                if(key_end) break;
                 match = key[local_offset++] == config_data[i];
+                key_end = key[local_offset] == 0;
                 break;
         }
     }
@@ -57,7 +63,7 @@ int config_get_int(fat_file_t *cfg, const char *key, int fallback) {
     char *config_data = heap_alloc(cfg->size);
     if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) {
         log_warning("CONFIG", "Failed to read config. Using fallback value for %s.\n", key);
-        return fallback;
+        goto ret_fallback;
     }
     uint32_t value_offset;
     if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fallback;
@@ -83,6 +89,35 @@ int config_get_int(fat_file_t *cfg, const char *key, int fallback) {
     if(negative) value *= -1;
     heap_free(config_data);
     return value;
+    ret_fallback:
+    heap_free(config_data);
+    return fallback;
+}
+
+char *config_get_string(fat_file_t *cfg, const char *key, char * fallback) {
+    char *config_data = heap_alloc(cfg->size);
+    if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) {
+        log_warning("CONFIG", "Failed to read config. Using fallback value for %s.\n", key);
+        goto ret_fallback;
+    }
+    uint32_t value_offset;
+    if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fallback;
+    int str_length = 0;
+    bool strip = true;
+    for(uint32_t i = value_offset; i < cfg->size; i++) {
+        if(strip && (config_data[i] == ' ' || config_data[i] == '\t')) {
+            value_offset++;
+            continue;
+        }
+        if(config_data[i] == '\n') break;
+        strip = false;
+        str_length++;
+    }
+    char *str = heap_alloc(str_length + 1);
+    memcpy(str, config_data + value_offset, str_length);
+    str[str_length] = 0;
+    heap_free(config_data);
+    return str;
     ret_fallback:
     heap_free(config_data);
     return fallback;

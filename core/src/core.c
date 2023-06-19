@@ -58,10 +58,8 @@ extern SYMBOL __tartarus_end;
     while(disk) {
         disk_part_t *partition = disk->partitions;
         while(partition) {
-            log(">> Partition %i on %i\n", (uint64_t) partition->id, (uint64_t) partition->disk->id);
             fat_info_t *fat_info = fat_initialize(partition);
             if(fat_info) {
-                log("\t> IS FAT\n");
                 cfg = config_find(fat_info);
                 if(cfg) break;
                 heap_free(fat_info);
@@ -71,11 +69,7 @@ extern SYMBOL __tartarus_end;
         if(cfg) break;
         disk = disk->next;
     }
-
     if(!cfg) log_panic("CORE", "Could not locate a config file");
-
-    int testval = config_get_int(cfg, "TEST", 0);
-    log("Test: %x\n", (uint64_t) testval);
 
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
@@ -87,6 +81,7 @@ extern SYMBOL __tartarus_end;
     if(!madt) log_panic("CORE", "No MADT table present");
     uint64_t *woa = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, pml4);
 #endif
+
 
     log("NO PROTOCOLS ACTIVE!\n");
 
