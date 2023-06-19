@@ -233,8 +233,8 @@ fat_file_t *fat_dir_lookup(fat_file_t *dir, const char *name) {
     return internal_dir_lookup(dir->info, dir->cluster_number, name);
 }
 
-int fat_read(fat_file_t *file, uint64_t offset, uint64_t count, void *dest) {
-    if(!file->is_dir && file->size < offset + count) return -1;
+uint64_t fat_read(fat_file_t *file, uint64_t offset, uint64_t count, void *dest) {
+    if((!file->is_dir && file->size < offset + count) || file->cluster_number == 0) return 0;
     uint64_t initial_count = count;
 
     uint32_t cluster = file->cluster_number;

@@ -4,10 +4,14 @@ OUTPUT_ARCH(i386)
 SECTIONS
 {
     . = 0xA000;
-    __tartarus_start = .; 
+    __tartarus_start = .;
+
+    .early : {
+        *(.entry)
+        *(.early)
+    }
 
     .text : {
-        *(.entry)
         *(.text)
     }
 

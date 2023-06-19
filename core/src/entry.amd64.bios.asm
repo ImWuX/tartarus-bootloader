@@ -5,7 +5,7 @@ bits 16
 section .entry
     jmp entry_real
 
-section .text
+section .early
 entry_real:
     xor ax, ax                              ; Reset all segments
     mov ds, ax

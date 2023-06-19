@@ -1,4 +1,5 @@
 bits 32
+section .early
 
 global int_exec
 int_exec:

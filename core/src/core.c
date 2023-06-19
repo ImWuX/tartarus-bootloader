@@ -74,6 +74,9 @@ extern SYMBOL __tartarus_end;
 
     if(!cfg) log_panic("CORE", "Could not locate a config file");
 
+    int testval = config_get_int(cfg, "TEST", 0);
+    log("Test: %x\n", (uint64_t) testval);
+
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 

@@ -34,6 +34,6 @@ typedef struct {
 fat_info_t *fat_initialize(disk_part_t *partition);
 fat_file_t *fat_root_lookup(fat_info_t *info, const char *name);
 fat_file_t *fat_dir_lookup(fat_file_t *dir, const char *name);
-int fat_read(fat_file_t *file, uint64_t offset, uint64_t count, void *dest);
+uint64_t fat_read(fat_file_t *file, uint64_t offset, uint64_t count, void *dest);
 
 #endif

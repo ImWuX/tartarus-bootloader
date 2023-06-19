@@ -81,7 +81,6 @@ reset_seg:
     xor ecx, ecx                                            ; LBA lower = 0
     xor edi, edi                                            ; LBA upper = 0
     call read
-    jc error.read_failed
     cmp byte [BUFFER + 0x1BE + 4], 0xEE                     ; Check for GPT type
     jne error.legacy_mbr
 
@@ -126,20 +125,21 @@ reset_seg:
     loop .loop
     jmp error.part_not_found
 .found:
-    mov edi, dword [ebx + 0x24]                             ; Upper 32 bits of entry LBA
-    cmp edi, dword [ebx + 0x3C]
+    mov edi, dword [ebx + 0x24]                             ; Upper 32 bits of LBA
+    cmp edi, dword [ebx + 0x3C]                             ; Upper 32 bits of end LBA
     jne error.core_too_large
 
     xor edx, edx
     movzx eax, word [sector_size]                           ; Sector size
-    mov ecx, dword [ebx + 0x28]                             ; Lower 32 bits of entry end LBA
-    sub ecx, dword [ebx + 0x20]                             ; Lower 32 bits of entry LBA
+    mov ecx, dword [ebx + 0x28]                             ; Lower 32 bits of end LBA
+    sub ecx, dword [ebx + 0x20]                             ; Lower 32 bits of LBA
     mul ecx
     cmp edx, 0
     jnz error.core_too_large
 
-    mov ecx, dword [ebx + 0x20]                             ; Lower 32 bits of entry LBA
-    mov edi, dword [ebx + 0x24]                             ; Upper 32 bits of entry LBA
+    mov ecx, dword [ebx + 0x20]                             ; Lower 32 bits of LBA
+    mov edi, dword [ebx + 0x24]                             ; Upper 32 bits of LBA
+
     mov ebx, eax                                            ; Size of core
     mov eax, CORE_ADDRESS
     call read
@@ -182,7 +182,6 @@ error:
 ;
 read:
     pushad
-    clc
 
     mov [DAP], dword (0x10 | (1 << 16))                     ; DAP Size + Sector Count
     mov [DAP + 4], dword eax                                ; Destination seg:off
@@ -190,7 +189,7 @@ read:
     mov [DAP + 12], dword edi                               ; Upper 32bits of LBA
 
     mov eax, ebx                                            ; dividend (eax) = byte count
-    xor edx, edx                                            ; Clear edx for division
+    xor edx, edx                                            ; Clear edx for division // TODO: LIKELY UNEEDED; DIV SHOULD SET IT NO MATTER WHAT
     movzx ecx, word [sector_size]                           ; divisor (ecx) = sector size
     div ecx
     cmp edx, 0                                              ; remainder > 0
@@ -201,13 +200,16 @@ read:
     mov ecx, eax                                            ; loop counter (ecx) = sectors to read
     mov si, DAP                                             ; si = DAP
     mov dl, byte [boot_drive]
-    movzx ebx, word [sector_size]
+    mov bx, word [sector_size]
 
 .loop:
     mov ah, 0x42                                            ; Extended read sectors from drive
     int 0x13
-    jc .done
-    add dword [DAP + 4], ebx                                ; Add sector size to destination
+    jc error.read_failed
+    add word [DAP + 4], bx                                 ; Add sector size to destination
+    jnc .loop_nc
+    add word [DAP + 6], 0x1000
+    .loop_nc:
     add dword [DAP + 8], 1                                  ; Add to LBA lower
     adc dword [DAP + 12], 0                                 ; Add to LBA upper
     loop .loop

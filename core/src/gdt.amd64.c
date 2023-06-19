@@ -38,6 +38,9 @@ static gdt_entry_t gdt[] = {
     }
 };
 
+#ifdef __BIOS
+__attribute__((section(".early")))
+#endif
 gdt_descriptor_t g_gdtr = {
     .limit = sizeof(gdt) - 1,
     .base = (uintptr_t) gdt
