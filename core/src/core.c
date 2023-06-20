@@ -10,6 +10,7 @@
 #include <drivers/disk.h>
 #include <drivers/acpi.h>
 #include <fs/fat.h>
+#include <elf.h>
 #include <config.h>
 #ifdef __AMD64
 #include <drivers/lapic.h>
@@ -82,8 +83,17 @@ extern SYMBOL __tartarus_end;
     uint64_t *woa = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, pml4);
 #endif
 
+    char *kernel_name = config_get_string(cfg, "KERNEL", "");
+    if(!*kernel_name) log_panic("CORE", "No kernel file specified");
+    fat_file_t *kernel = fat_root_lookup(cfg->info, kernel_name);
+    if(!kernel) log_panic("CORE", "Could not find the kernel (%s)\n", kernel_name);
 
-    log("NO PROTOCOLS ACTIVE!\n");
+#ifdef __AMD64
+    tartarus_elf_image_t *kernel_image = elf_load(kernel, pml4);
+    if(!kernel_image) log_panic("CORE", "Failed to load kernel\n");
+    if(!kernel_image->entry) log_panic("CORE", "Kernel has no entry point\n");
+#endif
+    log("Kernel Loaded!\n");
 
     // SystemTable->BootServices->ExitBootServices(ImageHandle, map_key);
     while(true);

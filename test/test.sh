@@ -1,4 +1,8 @@
 #!/bin/bash
+
+make testkernel.elf clean
+mv testkernel.elf basedir/kernel.elf
+
 case $@ in
     bios)
         rm -f test.img
@@ -11,6 +15,7 @@ case $@ in
             -drive format=raw,file=test.img \
             -smp cores=4 \
             -net none \
+            -no-reboot \
             \
             -vnc :0,websocket=on \
             -D ./log.txt -d int \
@@ -30,6 +35,7 @@ case $@ in
             -drive format=raw,file=test.img \
             -smp cores=4 \
             -net none \
+            -no-reboot \
             \
             -bios /usr/share/ovmf/OVMF.fd \
             \

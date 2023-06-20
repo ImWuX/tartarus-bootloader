@@ -245,9 +245,9 @@ uint64_t fat_read(fat_file_t *file, uint64_t offset, uint64_t count, void *dest)
     }
     offset %= file->info->cluster_size;
 
-    while(!IS_END(cluster, file->info->type)) {
+    while(!IS_END(cluster, file->info->type) && count > 0) {
         if(IS_BAD(cluster, file->info->type)) log_panic("FAT", "Bad cluster");
-        uint16_t lcount = (count < file->info->cluster_size ? count : file->info->cluster_size) - offset;
+        uint64_t lcount = count < file->info->cluster_size ? count : file->info->cluster_size;
         disk_read(file->info->partition, DATA_OFFSET(file->info) + (cluster - 2) * file->info->cluster_size + offset, lcount, dest);
         count -= lcount;
         dest += lcount;

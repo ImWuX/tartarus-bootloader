@@ -41,7 +41,7 @@ static void map_page(uint64_t *pml4, uint64_t paddr, uint64_t vaddr, bool large)
 }
 #endif
 
-void map_region(void *map, uint64_t paddr, uint64_t vaddr, uint64_t length) {
+void vmm_map(void *map, uint64_t paddr, uint64_t vaddr, uint64_t length) {
     uint64_t offset = 0;
     while(offset < length) {
         bool large = paddr % PAGE_SIZE_LARGE == 0 && vaddr % PAGE_SIZE_LARGE == 0 && length - offset >= PAGE_SIZE_LARGE;
@@ -58,12 +58,12 @@ void *vmm_initialize() {
     memset(map, 0, PAGE_SIZE);
 
     // Map 2nd page to 4GB
-    map_region(map, PAGE_SIZE, PAGE_SIZE, FOUR_GB - PAGE_SIZE);
-    map_region(map, PAGE_SIZE, HHDM_OFFSET + PAGE_SIZE, FOUR_GB - PAGE_SIZE);
+    vmm_map(map, PAGE_SIZE, PAGE_SIZE, FOUR_GB - PAGE_SIZE);
+    vmm_map(map, PAGE_SIZE, HHDM_OFFSET + PAGE_SIZE, FOUR_GB - PAGE_SIZE);
 
     // TODO: Map memory map entries past 4GB
 
-#if defined __BIOS
+#ifdef __BIOS
     asm volatile("mov %0, %%cr3" : : "r" (map));
 #endif
     return map;
