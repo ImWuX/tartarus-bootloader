@@ -343,6 +343,7 @@ void pmm_initialize() {
     tartarus_mmap_entry_t temp_map[MAX_MEMAP_ENTRIES];
     memcpy(temp_map, g_map, sizeof(tartarus_mmap_entry_t) * temp_map_size);
 
+    // TODO: Leave some memory for UEFI
     for(int i = 0; i < temp_map_size; i++) {
         if(temp_map[i].type != TARTARUS_MEMAP_TYPE_USABLE) continue;
         EFI_PHYSICAL_ADDRESS address = temp_map[i].base;

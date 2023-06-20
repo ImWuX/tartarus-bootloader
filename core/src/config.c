@@ -59,14 +59,11 @@ fat_file_t *config_find(fat_info_t *fs) {
     return 0;
 }
 
-int config_get_int(fat_file_t *cfg, const char *key, int fallback) {
+bool config_get_int_ext(fat_file_t *cfg, const char *key, int *out) {
     char *config_data = heap_alloc(cfg->size);
-    if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) {
-        log_warning("CONFIG", "Failed to read config. Using fallback value for %s.\n", key);
-        goto ret_fallback;
-    }
+    if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) log_panic("CONFIG", "Failed to read config\n");
     uint32_t value_offset;
-    if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fallback;
+    if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fail;
     int value = 0;
     bool strip = true;
     bool negative = false;
@@ -79,8 +76,8 @@ int config_get_int(fat_file_t *cfg, const char *key, int fallback) {
             continue;
         }
         if(config_data[i] < '0' || config_data[i] > '9') {
-            log_warning("CONIFG", "Invalid value for %s. Using fallback value.\n", key);
-            goto ret_fallback;
+            log_warning("CONIFG", "Invalid value for %s\n", key);
+            goto ret_fail;
         }
         strip = false;
         value *= 10;
@@ -88,20 +85,25 @@ int config_get_int(fat_file_t *cfg, const char *key, int fallback) {
     }
     if(negative) value *= -1;
     heap_free(config_data);
-    return value;
-    ret_fallback:
+    *out = value;
+    return false;
+    ret_fail:
     heap_free(config_data);
-    return fallback;
+    return true;
+
 }
 
-char *config_get_string(fat_file_t *cfg, const char *key, char * fallback) {
+int config_get_int(fat_file_t *cfg, const char *key, int fallback) {
+    int value;
+    if(config_get_int_ext(cfg, key, &value)) return fallback;
+    return value;
+}
+
+bool config_get_string_ext(fat_file_t *cfg, const char *key, char **out) {
     char *config_data = heap_alloc(cfg->size);
-    if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) {
-        log_warning("CONFIG", "Failed to read config. Using fallback value for %s.\n", key);
-        goto ret_fallback;
-    }
+    if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) log_panic("CONFIG", "Failed to read config\n");
     uint32_t value_offset;
-    if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fallback;
+    if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fail;
     int str_length = 0;
     bool strip = true;
     for(uint32_t i = value_offset; i < cfg->size; i++) {
@@ -116,9 +118,17 @@ char *config_get_string(fat_file_t *cfg, const char *key, char * fallback) {
     char *str = heap_alloc(str_length + 1);
     memcpy(str, config_data + value_offset, str_length);
     str[str_length] = 0;
+    *out = str;
     heap_free(config_data);
-    return str;
-    ret_fallback:
+    return false;
+    ret_fail:
     heap_free(config_data);
-    return fallback;
+    return true;
+
+}
+
+char *config_get_string(fat_file_t *cfg, const char *key, char * fallback) {
+    char *value;
+    if(config_get_string_ext(cfg, key, &value)) return fallback;
+    return value;
 }

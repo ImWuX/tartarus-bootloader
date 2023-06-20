@@ -29,4 +29,9 @@ typedef struct {
     tartarus_mmap_type_t type;
 } tartarus_mmap_entry_t;
 
+typedef struct {
+    tartarus_elf_image_t kernel_image;
+    tartarus_paddr_t acpi_rsdp;
+} tartarus_boot_info_t;
+
 #endif

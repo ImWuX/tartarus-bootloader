@@ -12,10 +12,11 @@
 #include <fs/fat.h>
 #include <elf.h>
 #include <config.h>
+#include <smp.h>
+#include <protocols/tartarus.h>
 #ifdef __AMD64
 #include <drivers/lapic.h>
 #endif
-#include <smp.h>
 
 #ifdef __UEFI
 EFI_SYSTEM_TABLE *g_st;
@@ -75,26 +76,26 @@ extern SYMBOL __tartarus_end;
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
+    vmm_address_space_t *address_space = vmm_initialize();
 #ifdef __AMD64
-    void *pml4 = vmm_initialize();
     if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
     acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
     if(!madt) log_panic("CORE", "No MADT table present");
-    uint64_t *woa = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, pml4);
+    uint64_t *woa = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, address_space);
 #endif
 
-    char *kernel_name = config_get_string(cfg, "KERNEL", "");
-    if(!*kernel_name) log_panic("CORE", "No kernel file specified");
+    char *kernel_name;
+    if(config_get_string_ext(cfg, "KERNEL", &kernel_name)) log_panic("CORE", "No kernel file specified");
     fat_file_t *kernel = fat_root_lookup(cfg->info, kernel_name);
     if(!kernel) log_panic("CORE", "Could not find the kernel (%s)\n", kernel_name);
 
-#ifdef __AMD64
-    tartarus_elf_image_t *kernel_image = elf_load(kernel, pml4);
+    tartarus_elf_image_t *kernel_image = elf_load(kernel, address_space);
     if(!kernel_image) log_panic("CORE", "Failed to load kernel\n");
     if(!kernel_image->entry) log_panic("CORE", "Kernel has no entry point\n");
-#endif
-    log("Kernel Loaded!\n");
+    log("Kernel Loaded\n");
 
-    // SystemTable->BootServices->ExitBootServices(ImageHandle, map_key);
-    while(true);
+    char *protocol;
+    if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
+    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space);
+    log_panic("CORE", "Invalid protocol %s\n", protocol);
 }

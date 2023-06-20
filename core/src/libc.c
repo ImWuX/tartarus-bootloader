@@ -8,3 +8,10 @@ int memcmp(const void* lhs, const void* rhs, size_t count) {
     }
     return 0;
 }
+
+int strcmp(const char* lhs, const char* rhs) {
+    for(; *lhs || *rhs; rhs++, lhs++) {
+        if(*rhs != *lhs) return *lhs - *rhs;
+    }
+    return 0;
+}

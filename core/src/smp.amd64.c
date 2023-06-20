@@ -50,7 +50,7 @@ typedef struct {
     uint32_t heap;
     uint16_t gdtr_limit;
     uint32_t gdtr_base;
-} __attribute__((packed)) boot_info_t;
+} __attribute__((packed)) ap_info_t;
 
 typedef int SYMBOL[];
 
@@ -62,16 +62,16 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
     uint8_t bsp_id = lapic_bsp();
 
     size_t apinit_size = (uintptr_t) g_initap_end - (uintptr_t) g_initap_start;
-    if(apinit_size + sizeof(boot_info_t) > PAGE_SIZE) log_panic("SMP", "Unable to fit initap into a page");
+    if(apinit_size + sizeof(ap_info_t) > PAGE_SIZE) log_panic("SMP", "Unable to fit initap into a page");
     memcpy((void *) reserved_page, (void *) g_initap_start, apinit_size);
 
     void *woa_page = pmm_alloc_page(PMM_AREA_MAX);
     memset(woa_page, 0, PAGE_SIZE);
 
-    boot_info_t *boot_info = (boot_info_t *) (reserved_page + apinit_size);
-    boot_info->pml4 = (uint32_t) (uintptr_t) pml4;
-    boot_info->gdtr_limit = g_gdtr.limit;
-    boot_info->gdtr_base = (uint32_t) g_gdtr.base;
+    ap_info_t *ap_info = (ap_info_t *) (reserved_page + apinit_size);
+    ap_info->pml4 = (uint32_t) (uintptr_t) pml4;
+    ap_info->gdtr_limit = g_gdtr.limit;
+    ap_info->gdtr_base = (uint32_t) g_gdtr.base;
 
     uint32_t count = 0;
     while(count < madt->sdt_header.length) {
@@ -80,10 +80,10 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
             case MADT_LAPIC:
                 madt_record_lapic_t *lapic_record = (madt_record_lapic_t *) record;
                 if(lapic_record->lapic_id == bsp_id) break;
-                boot_info->init = 0;
-                boot_info->apic_id = lapic_record->lapic_id;
-                boot_info->wait_on_address = (uint64_t) ((uintptr_t) woa_page + boot_info->apic_id * 8);
-                boot_info->heap = (uint32_t) (uintptr_t) pmm_alloc(PMM_AREA_EXTENDED, 4) + PAGE_SIZE * 4;
+                ap_info->init = 0;
+                ap_info->apic_id = lapic_record->lapic_id;
+                ap_info->wait_on_address = (uint64_t) ((uintptr_t) woa_page + ap_info->apic_id * 16);
+                ap_info->heap = (uint32_t) (uintptr_t) pmm_alloc(PMM_AREA_EXTENDED, 4) + PAGE_SIZE * 4;
 
                 lapic_write(LAPIC_REG_ICR2, lapic_record->lapic_id << 24);
                 lapic_write(LAPIC_REG_ICR1, ICR_ASSERT | ICR_INIT);
@@ -96,7 +96,7 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
                 for(int i = 0; i < 1000; i++) {
                     tsc_block(CYCLES_10MIL);
                     uint8_t value = 0;
-                    asm volatile("lock xadd %0, %1" : "+r" (value) : "m" (boot_info->init) : "memory");
+                    asm volatile("lock xadd %0, %1" : "+r" (value) : "m" (ap_info->init) : "memory");
                     if(value > 0) {
                         log(">> LAPIC(%i) Initialized\n", (uint64_t) lapic_record->lapic_id);
                         goto success;

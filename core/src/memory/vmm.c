@@ -39,22 +39,20 @@ static void map_page(uint64_t *pml4, uint64_t paddr, uint64_t vaddr, bool large)
     current_table[indexes[highest_index]] = (paddr & PT_ADDRESS_MASK) | PT_PRESENT | PT_RW;
     if(large) current_table[indexes[highest_index]] |= PT_LARGE;
 }
-#endif
 
-void vmm_map(void *map, uint64_t paddr, uint64_t vaddr, uint64_t length) {
+void vmm_map(vmm_address_space_t *address_space, uint64_t paddr, uint64_t vaddr, uint64_t length) {
     uint64_t offset = 0;
     while(offset < length) {
         bool large = paddr % PAGE_SIZE_LARGE == 0 && vaddr % PAGE_SIZE_LARGE == 0 && length - offset >= PAGE_SIZE_LARGE;
-        map_page(map, paddr, vaddr, large);
+        map_page(address_space, paddr, vaddr, large);
         paddr += large ? PAGE_SIZE_LARGE : PAGE_SIZE;
         vaddr += large ? PAGE_SIZE_LARGE : PAGE_SIZE;
         offset += large ? PAGE_SIZE_LARGE : PAGE_SIZE;
     }
 }
 
-#ifdef __AMD64
-void *vmm_initialize() {
-    void *map = pmm_alloc_page(PMM_AREA_MAX);
+vmm_address_space_t *vmm_initialize() {
+    vmm_address_space_t *map = pmm_alloc_page(PMM_AREA_MAX);
     memset(map, 0, PAGE_SIZE);
 
     // Map 2nd page to 4GB
@@ -62,10 +60,6 @@ void *vmm_initialize() {
     vmm_map(map, PAGE_SIZE, HHDM_OFFSET + PAGE_SIZE, FOUR_GB - PAGE_SIZE);
 
     // TODO: Map memory map entries past 4GB
-
-#ifdef __BIOS
-    asm volatile("mov %0, %%cr3" : : "r" (map));
-#endif
     return map;
 }
 #endif

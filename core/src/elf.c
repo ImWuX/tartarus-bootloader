@@ -75,7 +75,7 @@ typedef enum {
     PT_TLS
 } segment_types_t;
 
-tartarus_elf_image_t *elf_load(fat_file_t *file, void *pml4) {
+tartarus_elf_image_t *elf_load(fat_file_t *file, vmm_address_space_t *address_space) {
     elf64_header_t *header = heap_alloc(sizeof(elf64_header_t));
     if(fat_read(file, 0, sizeof(elf64_header_t), header) != sizeof(elf64_header_t)) log_panic("ELF", "Unable to read header from ELF");
 
@@ -122,7 +122,7 @@ tartarus_elf_image_t *elf_load(fat_file_t *file, void *pml4) {
     }
 
     elf64_program_header_t *program_header = heap_alloc(sizeof(elf64_program_header_t));
-    
+
     elf64_addr_t base_address = UINT64_MAX;
     for(int i = 0; i < header->program_header_entry_count; i++) {
         if(fat_read(file, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, program_header) != header->program_header_entry_size) {
@@ -144,7 +144,8 @@ tartarus_elf_image_t *elf_load(fat_file_t *file, void *pml4) {
 
     elf64_xword_t page_count = (size + PAGE_SIZE - 1) / PAGE_SIZE;
     void *paddr = pmm_alloc(PMM_AREA_MAX, page_count);
-    vmm_map(pml4, (uint64_t) (uintptr_t) paddr, base_address, page_count * PAGE_SIZE);
+    // TODO: Map segments with proper rights, allocate them pages away to do this, yada yada
+    vmm_map(address_space, (uint64_t) (uintptr_t) paddr, base_address, page_count * PAGE_SIZE);
 
     for(int i = 0; i < header->program_header_entry_count; i++) {
         if(fat_read(file, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, program_header) != header->program_header_entry_size) {
