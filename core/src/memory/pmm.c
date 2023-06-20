@@ -227,12 +227,6 @@ void *pmm_alloc_page(pmm_area_t area) {
     return pmm_alloc(area, 1);
 }
 
-void pmm_map() {
-    for(int i = 0; i < g_map_size; i++) {
-        log("Entry %i >> Type: %i, Base: %x, Length: %x\n", (uint64_t) i, (uint64_t) g_map[i].type, (uint64_t) g_map[i].base, (uint64_t) g_map[i].length);
-    }
-}
-
 void pmm_free(void *address, size_t page_count) {
     if(pmm_convert(TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE, TARTARUS_MEMAP_TYPE_USABLE, (uint64_t) (uintptr_t) address, (uint64_t) page_count * PAGE_SIZE)) log_panic("PMM", "Cannot free an unallocated area");
 }

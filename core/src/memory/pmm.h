@@ -24,6 +24,4 @@ void *pmm_alloc_page(pmm_area_t area);
 void pmm_free(void *address, size_t page_count);
 void pmm_free_page(void *address);
 
-void pmm_map();
-
 #endif
