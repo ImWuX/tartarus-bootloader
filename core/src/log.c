@@ -3,19 +3,18 @@
 #include <stdarg.h>
 #include <core.h>
 #include <graphics/basicfont.h>
-#include <graphics/fb.h>
 #if defined __BIOS && defined __AMD64
 #include <int.h>
 #endif
 
 #define INSET 100
-
 #define FG 0xFFFFFFFF
 #define BG 0x00000000
 
-static char *g_chars = "0123456789ABCDEF";
-static int g_x = 0;
-static int g_y = 0;
+static fb_t *g_fb = 0;
+static const char *g_chars = "0123456789ABCDEF";
+static uint32_t g_x = 0;
+static uint32_t g_y = 0;
 
 static void numprint(uint64_t value, uint64_t radix) {
     uint64_t pw = 1;
@@ -60,6 +59,13 @@ static void log_list(char *str, va_list args) {
     }
 }
 
+void log_set_fb(fb_t *fb) {
+    g_fb = fb;
+    g_x = 0;
+    g_y = 0;
+    fb_clear(fb, BG);
+}
+
 void log_warning(char *src, char *str, ...) {
     log("WARN! [%s] ", src);
     va_list args;
@@ -86,7 +92,7 @@ void log(char *str, ...) {
 }
 
 void log_putchar(char c) {
-    if(g_fb_initialized) {
+    if(g_fb) {
         switch(c) {
             case '\n':
                 g_y++;
@@ -96,13 +102,13 @@ void log_putchar(char c) {
                 g_x += 4 - g_x % 4;
                 break;
             default:
-                fb_char(INSET + g_x * BASICFONT_WIDTH, INSET + g_y * BASICFONT_HEIGHT, c, FG);
+                fb_char(g_fb, INSET + g_x * BASICFONT_WIDTH, INSET + g_y * BASICFONT_HEIGHT, c, FG);
                 g_x ++;
                 break;
         }
-        if(INSET + g_x * BASICFONT_WIDTH >= g_fb_width - INSET) g_x = 0;
-        if(INSET + g_y * BASICFONT_HEIGHT >= g_fb_height - INSET) {
-            if(g_fb_initialized) fb_clear(BG);
+        if(INSET + g_x * BASICFONT_WIDTH >= g_fb->width - INSET) g_x = 0;
+        if(INSET + g_y * BASICFONT_HEIGHT >= g_fb->height - INSET) {
+            fb_clear(g_fb, BG);
             g_y = 0;
         }
     } else {

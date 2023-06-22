@@ -18,6 +18,9 @@ The general idea is to leave the CPU in the simplest state possible for the kern
 ## Boot Info
 The bootloader prepares a structure that will be passed to the kernel as the one and only argument to the entrypoint. This structure is defined in the `tartarus.h` header file.
 
+### AMD64
+On amd64 the System V ABI is assumed. The only implication relevant to the kernel is that tartarus will pass `boot_info` through the `rdi` register as defined by the SysV calling convention. If the target kernel uses another ABI, an assembly stub is needed to retrieve boot info.
+
 ## Physical Memory Map
 - Sorted by base
 - `USABLE` / `BOOT_RECLAIMABLE` entries are strict entries. In addition to the normal properties, strict entries are also guaranteed to

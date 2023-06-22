@@ -21,6 +21,7 @@
 #ifdef __UEFI
 EFI_SYSTEM_TABLE *g_st;
 EFI_HANDLE g_imagehandle;
+EFI_GRAPHICS_OUTPUT_PROTOCOL *g_gop;
 
 [[noreturn]] EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
     g_st = SystemTable;
@@ -31,8 +32,7 @@ EFI_HANDLE g_imagehandle;
     EFI_GUID gop_guid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     status = SystemTable->BootServices->LocateProtocol(&gop_guid, NULL, (void **) &gop);
     if(EFI_ERROR(status)) log_panic("CORE", "Unable to locate GOP protocol");
-    status = fb_initialize(gop, 1920, 1080);
-    if(EFI_ERROR(status)) log_panic("CORE", "Unable to initialize a GOP");
+    g_gop = gop;
 #elif defined __BIOS && defined __AMD64
 typedef int SYMBOL[];
 
@@ -40,10 +40,12 @@ extern SYMBOL __tartarus_start;
 extern SYMBOL __tartarus_end;
 
 [[noreturn]] void core() {
-    fb_initialize(1920, 1080);
 #else
 #error Invalid target
 #endif
+    fb_t initial_fb;
+    if(fb_aquire(1920, 1080, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");
+    log_set_fb(&initial_fb);
     pmm_initialize();
 #ifdef __AMD64
 #ifdef __BIOS
