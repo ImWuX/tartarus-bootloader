@@ -40,6 +40,8 @@ typedef struct {
     tartarus_elf_image_t kernel_image;
     tartarus_addr_t acpi_rsdp;
     tartarus_fb_t framebuffer;
+    tartarus_addr_t memory_map;
+    tartarus_uint_t memory_map_size;
 } tartarus_boot_info_t;
 
 #endif

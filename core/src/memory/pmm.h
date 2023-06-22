@@ -10,6 +10,7 @@
 #else
 #error Invalid target or missing implementation
 #endif
+#define MAX_MEMAP_ENTRIES 512
 
 typedef enum {
     PMM_AREA_CONVENTIONAL,
@@ -17,6 +18,9 @@ typedef enum {
     PMM_AREA_EXTENDED,
     PMM_AREA_MAX
 } pmm_area_t;
+
+extern int g_pmm_map_size;
+extern tartarus_mmap_entry_t g_pmm_map[MAX_MEMAP_ENTRIES];
 
 void pmm_initialize();
 bool pmm_convert(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, uint64_t base, uint64_t length);

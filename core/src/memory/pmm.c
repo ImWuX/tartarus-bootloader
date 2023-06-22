@@ -11,9 +11,6 @@
 #endif
 
 #define IS_STRICT(type) ((type) == TARTARUS_MEMAP_TYPE_USABLE || (type) == TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE)
-#define MAX_MEMAP_ENTRIES 512
-#define CONVENTIONAL_BOUNDARY 
-#define UPPER_BOUNDARY 
 
 typedef struct {
     uintptr_t bottom_boundary;
@@ -27,32 +24,32 @@ static region_t regions[] = {
     { .bottom_boundary = 0x100000,  .top_boundary = UINTPTR_MAX }
 };
 
-static int g_map_size;
-static tartarus_mmap_entry_t g_map[MAX_MEMAP_ENTRIES];
+int g_pmm_map_size;
+tartarus_mmap_entry_t g_pmm_map[MAX_MEMAP_ENTRIES];
 
 static void map_insert(int index, tartarus_mmap_entry_t entry) {
-    if(g_map_size == MAX_MEMAP_ENTRIES) log_panic("PMM", "Memory map overflow");
-    for(int i = g_map_size; i > index; i--) {
-        g_map[i] = g_map[i - 1];
+    if(g_pmm_map_size == MAX_MEMAP_ENTRIES) log_panic("PMM", "Memory map overflow");
+    for(int i = g_pmm_map_size; i > index; i--) {
+        g_pmm_map[i] = g_pmm_map[i - 1];
     }
-    g_map[index] = entry;
-    g_map_size++;
+    g_pmm_map[index] = entry;
+    g_pmm_map_size++;
 }
 
 static void map_push(tartarus_mmap_entry_t entry) {
-    map_insert(g_map_size, entry);
+    map_insert(g_pmm_map_size, entry);
 }
 
 static void map_delete(int index) {
-    for(int i = index; i < g_map_size - 1; i++) {
-        g_map[i] = g_map[i + 1];
+    for(int i = index; i < g_pmm_map_size - 1; i++) {
+        g_pmm_map[i] = g_pmm_map[i + 1];
     }
-    g_map_size--;
+    g_pmm_map_size--;
 }
 
 static int map_sorted_add(tartarus_mmap_entry_t entry) {
     int i = 0;
-    for(; i < g_map_size && g_map[i].base <= entry.base; i++);
+    for(; i < g_pmm_map_size && g_pmm_map[i].base <= entry.base; i++);
     map_insert(i, entry);
     return i;
 }
@@ -60,44 +57,44 @@ static int map_sorted_add(tartarus_mmap_entry_t entry) {
 // TODO: like 90% sure this is broken
 static void map_sanitize() {
     restart_overlap:
-    for(int i = 0; i < g_map_size; i++) {
-        if(g_map[i].type != TARTARUS_MEMAP_TYPE_USABLE && g_map[i].type != TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE) continue;
-        for(int j = 0; j < g_map_size; j++) {
+    for(int i = 0; i < g_pmm_map_size; i++) {
+        if(g_pmm_map[i].type != TARTARUS_MEMAP_TYPE_USABLE && g_pmm_map[i].type != TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE) continue;
+        for(int j = 0; j < g_pmm_map_size; j++) {
             if(j == i) continue;
-            if(g_map[j].base <= g_map[i].base && g_map[j].base + g_map[j].length >= g_map[i].base + g_map[i].length) {
+            if(g_pmm_map[j].base <= g_pmm_map[i].base && g_pmm_map[j].base + g_pmm_map[j].length >= g_pmm_map[i].base + g_pmm_map[i].length) {
                 map_delete(i);
                 goto restart_overlap;
             }
-            if(g_map[j].base + g_map[j].length > g_map[i].base && g_map[j].base <= g_map[i].base) {
-                uint64_t diff = (g_map[j].base + g_map[j].length) - g_map[i].base;
-                if(diff < g_map[i].length) {
-                    g_map[i].base += diff;
-                    g_map[i].length -= diff;
+            if(g_pmm_map[j].base + g_pmm_map[j].length > g_pmm_map[i].base && g_pmm_map[j].base <= g_pmm_map[i].base) {
+                uint64_t diff = (g_pmm_map[j].base + g_pmm_map[j].length) - g_pmm_map[i].base;
+                if(diff < g_pmm_map[i].length) {
+                    g_pmm_map[i].base += diff;
+                    g_pmm_map[i].length -= diff;
                 }
             }
-            if(g_map[j].base > g_map[i].base && g_map[j].base < g_map[i].base + g_map[i].length) {
-                if(g_map[i].base + g_map[i].length > g_map[j].base + g_map[j].length) {
+            if(g_pmm_map[j].base > g_pmm_map[i].base && g_pmm_map[j].base < g_pmm_map[i].base + g_pmm_map[i].length) {
+                if(g_pmm_map[i].base + g_pmm_map[i].length > g_pmm_map[j].base + g_pmm_map[j].length) {
                     map_push((tartarus_mmap_entry_t) {
-                        .base = g_map[j].base + g_map[j].length,
-                        .length = (g_map[i].base + g_map[i].length) - (g_map[j].base + g_map[j].length),
-                        .type = g_map[i].type
+                        .base = g_pmm_map[j].base + g_pmm_map[j].length,
+                        .length = (g_pmm_map[i].base + g_pmm_map[i].length) - (g_pmm_map[j].base + g_pmm_map[j].length),
+                        .type = g_pmm_map[i].type
                     });
                 }
-                g_map[i].length -= g_map[i].base + g_map[i].length - g_map[j].base;
+                g_pmm_map[i].length -= g_pmm_map[i].base + g_pmm_map[i].length - g_pmm_map[j].base;
             }
         }
-        if(g_map[i].length == 0) {
+        if(g_pmm_map[i].length == 0) {
             map_delete(i);
             goto restart_overlap;
         }
     }
 
     restart_merge:
-    for(int i = 0; i < g_map_size; i++) {
-        for(int j = 0; j < g_map_size; j++) {
-            if(g_map[i].type != g_map[j].type) continue;
-            if(g_map[i].base == g_map[j].base + g_map[j].length) {
-                g_map[i].length += g_map[j].length;
+    for(int i = 0; i < g_pmm_map_size; i++) {
+        for(int j = 0; j < g_pmm_map_size; j++) {
+            if(g_pmm_map[i].type != g_pmm_map[j].type) continue;
+            if(g_pmm_map[i].base == g_pmm_map[j].base + g_pmm_map[j].length) {
+                g_pmm_map[i].length += g_pmm_map[j].length;
                 map_delete(j);
                 goto restart_merge;
             }
@@ -105,38 +102,38 @@ static void map_sanitize() {
     }
 
     restart_align:
-    for(int i = 0; i < g_map_size; i++) {
-        if(g_map[i].type != TARTARUS_MEMAP_TYPE_USABLE && g_map[i].type != TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE) continue;
-        uint64_t diff = PAGE_SIZE - g_map[i].base % PAGE_SIZE;
+    for(int i = 0; i < g_pmm_map_size; i++) {
+        if(g_pmm_map[i].type != TARTARUS_MEMAP_TYPE_USABLE && g_pmm_map[i].type != TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE) continue;
+        uint64_t diff = PAGE_SIZE - g_pmm_map[i].base % PAGE_SIZE;
         if(diff != PAGE_SIZE) {
-            if(g_map[i].length < diff || g_map[i].length - diff < PAGE_SIZE) {
+            if(g_pmm_map[i].length < diff || g_pmm_map[i].length - diff < PAGE_SIZE) {
                 map_delete(i);
                 goto restart_align;
             }
-            g_map[i].base += diff;
-            g_map[i].length -= diff;
+            g_pmm_map[i].base += diff;
+            g_pmm_map[i].length -= diff;
         }
-        g_map[i].length -= g_map[i].length % PAGE_SIZE;
+        g_pmm_map[i].length -= g_pmm_map[i].length % PAGE_SIZE;
     }
 
-    for(int i = 1; i < g_map_size; i++) {
-        for(int j = 0; j < g_map_size - i; j++) {
-            if(g_map[j].base < g_map[j + 1].base) continue;
-            tartarus_mmap_entry_t temp_entry = g_map[j];
-            g_map[j] = g_map[j + 1];
-            g_map[j + 1] = temp_entry;
+    for(int i = 1; i < g_pmm_map_size; i++) {
+        for(int j = 0; j < g_pmm_map_size - i; j++) {
+            if(g_pmm_map[j].base < g_pmm_map[j + 1].base) continue;
+            tartarus_mmap_entry_t temp_entry = g_pmm_map[j];
+            g_pmm_map[j] = g_pmm_map[j + 1];
+            g_pmm_map[j + 1] = temp_entry;
         }
     }
 
-    for(int i = 0; i < g_map_size; i++) {
-        if(g_map[i].type != TARTARUS_MEMAP_TYPE_USABLE && g_map[i].type != TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE) continue;
-        if(g_map[i].base >= PAGE_SIZE) continue;
-        if(g_map[i].length <= PAGE_SIZE) {
+    for(int i = 0; i < g_pmm_map_size; i++) {
+        if(g_pmm_map[i].type != TARTARUS_MEMAP_TYPE_USABLE && g_pmm_map[i].type != TARTARUS_MEMAP_TYPE_BOOT_RECLAIMABLE) continue;
+        if(g_pmm_map[i].base >= PAGE_SIZE) continue;
+        if(g_pmm_map[i].length <= PAGE_SIZE) {
             map_delete(i);
             break;
         } else {
-            g_map[i].base += PAGE_SIZE;
-            g_map[i].length -= PAGE_SIZE;
+            g_pmm_map[i].base += PAGE_SIZE;
+            g_pmm_map[i].length -= PAGE_SIZE;
             break;
         }
     }
@@ -150,44 +147,44 @@ bool pmm_convert(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_type, 
     if(length == 0) log_panic("PMM", "Tried to create a zero-length entry");
     if(IS_STRICT(dest_type) && (base % PAGE_SIZE != 0 || length % PAGE_SIZE != 0)) log_panic("PMM", "Tried to convert a non-aligned region to a strict type");
     int i = 0;
-    for(; i < g_map_size; i++) {
-        if(g_map[i].type != src_type) continue;
-        if(g_map[i].base > base || g_map[i].base + g_map[i].length < base + length) continue;
+    for(; i < g_pmm_map_size; i++) {
+        if(g_pmm_map[i].type != src_type) continue;
+        if(g_pmm_map[i].base > base || g_pmm_map[i].base + g_pmm_map[i].length < base + length) continue;
         goto found;
     }
     return true;
     found:
-    uint64_t end_diff = (g_map[i].base + g_map[i].length) - (base + length);
+    uint64_t end_diff = (g_pmm_map[i].base + g_pmm_map[i].length) - (base + length);
     if(end_diff > 0) {
         int j = map_sorted_add((tartarus_mmap_entry_t) {
             .base = base + length,
             .length = end_diff,
-            .type = g_map[i].type
+            .type = g_pmm_map[i].type
         });
-        g_map[i].length -= end_diff;
+        g_pmm_map[i].length -= end_diff;
     }
 
-    uint64_t start_diff = base - g_map[i].base;
+    uint64_t start_diff = base - g_pmm_map[i].base;
     if(start_diff > 0) {
-        g_map[i].length = start_diff;
+        g_pmm_map[i].length = start_diff;
         i = map_sorted_add((tartarus_mmap_entry_t) {
             .base = base,
             .length = length,
             .type = dest_type
         });
     } else {
-        g_map[i].type = dest_type;
+        g_pmm_map[i].type = dest_type;
     }
 
-    for(int j = 0; j < g_map_size; j++) {
+    for(int j = 0; j < g_pmm_map_size; j++) {
         if(j == i) continue;
-        if(g_map[j].type != dest_type) continue;
-        if(g_map[i].base + g_map[i].length == g_map[j].base) {
-            g_map[i].length += g_map[j].length;
+        if(g_pmm_map[j].type != dest_type) continue;
+        if(g_pmm_map[i].base + g_pmm_map[i].length == g_pmm_map[j].base) {
+            g_pmm_map[i].length += g_pmm_map[j].length;
             map_delete(j);
         }
-        if(g_map[j].base + g_map[j].length == g_map[i].base) {
-            g_map[j].length += g_map[i].length;
+        if(g_pmm_map[j].base + g_pmm_map[j].length == g_pmm_map[i].base) {
+            g_pmm_map[j].length += g_pmm_map[i].length;
             map_delete(i);
             i = j;
         }
@@ -201,14 +198,14 @@ void *pmm_alloc_ext(tartarus_mmap_type_t src_type, tartarus_mmap_type_t dest_typ
     uintptr_t area_end = regions[area].top_boundary;
 
     size_t length = page_count * PAGE_SIZE;
-    for(int i = 0; i < g_map_size; i++) {
-        if(g_map[i].type != src_type) continue;
-        if(g_map[i].base + g_map[i].length <= area_start) continue; // entry ends before area start
-        if(g_map[i].base >= area_end) continue; // entry starts after area end
+    for(int i = 0; i < g_pmm_map_size; i++) {
+        if(g_pmm_map[i].type != src_type) continue;
+        if(g_pmm_map[i].base + g_pmm_map[i].length <= area_start) continue; // entry ends before area start
+        if(g_pmm_map[i].base >= area_end) continue; // entry starts after area end
 
-        uintptr_t ue_base = g_map[i].base;
-        if(g_map[i].base < area_start) ue_base = area_start;
-        uintptr_t ue_length = g_map[i].length - (ue_base - g_map[i].base);
+        uintptr_t ue_base = g_pmm_map[i].base;
+        if(g_pmm_map[i].base < area_start) ue_base = area_start;
+        uintptr_t ue_length = g_pmm_map[i].length - (ue_base - g_pmm_map[i].base);
         if(ue_base + ue_length > area_end) ue_length -= (ue_base + ue_length) - area_end;
         if(ue_length < length) continue; // claim does not fit inside entry
 
@@ -239,7 +236,7 @@ void pmm_free_page(void *address) {
 #define E820_MAX 512
 
 void pmm_initialize() {
-    g_map_size = 0;
+    g_pmm_map_size = 0;
 
     e820_entry_t e820[E820_MAX];
     int e820_size = e820_load((void *) &e820, E820_MAX);
@@ -289,7 +286,7 @@ void pmm_initialize() {
         if(EFI_ERROR(status)) log_panic("PMM", "Unable retrieve the UEFI memory map");
     }
 
-    g_map_size = 0;
+    g_pmm_map_size = 0;
     for(UINTN i = 0; i < map_size; i += descriptor_size) {
         EFI_MEMORY_DESCRIPTOR *entry = (EFI_MEMORY_DESCRIPTOR *) ((uintptr_t) map + i);
         tartarus_mmap_type_t type;
@@ -331,9 +328,9 @@ void pmm_initialize() {
 
     map_sanitize();
 
-    int temp_map_size = g_map_size;
+    int temp_map_size = g_pmm_map_size;
     tartarus_mmap_entry_t temp_map[MAX_MEMAP_ENTRIES];
-    memcpy(temp_map, g_map, sizeof(tartarus_mmap_entry_t) * temp_map_size);
+    memcpy(temp_map, g_pmm_map, sizeof(tartarus_mmap_entry_t) * temp_map_size);
 
     // TODO: Leave some memory for UEFI
     for(int i = 0; i < temp_map_size; i++) {

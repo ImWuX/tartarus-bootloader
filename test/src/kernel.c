@@ -48,6 +48,10 @@ void kmain(tartarus_boot_info_t *boot_info) {
     print_number(boot_info->framebuffer.height, 10);
     print("\n    FB PITCH: ");
     print_number(boot_info->framebuffer.pitch, 10);
+    print("\n    MEMAP: ");
+    print_number(boot_info->memory_map, 16);
+    print("\n    MEMAP SIZE: ");
+    print_number(boot_info->memory_map_size, 10);
 
     while(true);
 }
