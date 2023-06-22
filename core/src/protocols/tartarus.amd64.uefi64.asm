@@ -2,9 +2,9 @@ global protocol_tartarus_uefi_handoff
 
 bits 64
 protocol_tartarus_uefi_handoff:
-    mov eax, cr0
-    or eax, (1 << 16)                           ; Set write protect bit
-    mov cr0, eax
+    mov rax, cr0
+    or rax, (1 << 16)                           ; Set write protect bit
+    mov cr0, rax
 
     mov eax, 0x80000001
     cpuid

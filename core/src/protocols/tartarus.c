@@ -15,7 +15,7 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t boot_info);
 #endif
 #endif
 
-[[noreturn]] void protocol_tartarus_handoff(tartarus_elf_image_t *kernel, acpi_rsdp_t *rsdp, vmm_address_space_t *address_space) {
+[[noreturn]] void protocol_tartarus_handoff(tartarus_elf_image_t *kernel, acpi_rsdp_t *rsdp, vmm_address_space_t address_space) {
 #ifdef __AMD64
     asm volatile("mov %0, %%cr3" : : "r" (address_space));
 #endif

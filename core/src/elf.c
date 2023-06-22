@@ -75,7 +75,7 @@ typedef enum {
     PT_TLS
 } segment_types_t;
 
-tartarus_elf_image_t *elf_load(fat_file_t *file, vmm_address_space_t *address_space) {
+tartarus_elf_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_space) {
     elf64_header_t *header = heap_alloc(sizeof(elf64_header_t));
     if(fat_read(file, 0, sizeof(elf64_header_t), header) != sizeof(elf64_header_t)) log_panic("ELF", "Unable to read header from ELF");
 

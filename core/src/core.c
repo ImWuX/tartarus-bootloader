@@ -76,7 +76,7 @@ extern SYMBOL __tartarus_end;
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
-    vmm_address_space_t *address_space = vmm_initialize();
+    vmm_address_space_t address_space = vmm_initialize();
 #ifdef __AMD64
     if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
     acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");

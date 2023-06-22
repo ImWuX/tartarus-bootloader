@@ -40,7 +40,7 @@ static void map_page(uint64_t *pml4, uint64_t paddr, uint64_t vaddr, bool large)
     if(large) current_table[indexes[highest_index]] |= PT_LARGE;
 }
 
-void vmm_map(vmm_address_space_t *address_space, uint64_t paddr, uint64_t vaddr, uint64_t length) {
+void vmm_map(vmm_address_space_t address_space, uint64_t paddr, uint64_t vaddr, uint64_t length) {
     uint64_t offset = 0;
     while(offset < length) {
         bool large = paddr % PAGE_SIZE_LARGE == 0 && vaddr % PAGE_SIZE_LARGE == 0 && length - offset >= PAGE_SIZE_LARGE;
@@ -51,8 +51,8 @@ void vmm_map(vmm_address_space_t *address_space, uint64_t paddr, uint64_t vaddr,
     }
 }
 
-vmm_address_space_t *vmm_initialize() {
-    vmm_address_space_t *map = pmm_alloc_page(PMM_AREA_MAX);
+vmm_address_space_t vmm_initialize() {
+    vmm_address_space_t map = pmm_alloc_page(PMM_AREA_MAX);
     memset(map, 0, PAGE_SIZE);
 
     // Map 2nd page to 4GB

@@ -5,6 +5,6 @@
 #include <memory/vmm.h>
 #include <drivers/acpi.h>
 
-[[noreturn]] void protocol_tartarus_handoff(tartarus_elf_image_t *kernel, acpi_rsdp_t *rsdp, vmm_address_space_t *address_space);
+[[noreturn]] void protocol_tartarus_handoff(tartarus_elf_image_t *kernel, acpi_rsdp_t *rsdp, vmm_address_space_t address_space);
 
 #endif
