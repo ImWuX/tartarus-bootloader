@@ -7,6 +7,8 @@
 #ifdef __AMD64
 #define PAGE_SIZE 0x1000
 #define PAGE_SIZE_LARGE 0x200000
+#else
+#error Invalid target or missing implementation
 #endif
 
 typedef enum {

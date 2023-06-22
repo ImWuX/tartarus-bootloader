@@ -11,8 +11,4 @@ extern EFI_SYSTEM_TABLE *g_st;
 extern EFI_HANDLE g_imagehandle;
 #endif
 
-#if defined __BIOS && defined __AMD64
-void core();
-#endif
-
 #endif

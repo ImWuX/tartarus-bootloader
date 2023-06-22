@@ -11,30 +11,6 @@ bool g_fb_initialized = false;
 int g_fb_width;
 int g_fb_height;
 
-#ifdef __UEFI
-EFI_GRAPHICS_OUTPUT_PROTOCOL *g_gop;
-
-#define FB_BASE g_gop->Mode->FrameBufferBase
-#define PITCH g_gop->Mode->Info->PixelsPerScanLine
-
-EFI_STATUS fb_initialize(EFI_GRAPHICS_OUTPUT_PROTOCOL *gop, UINTN target_width, UINTN target_height) {
-    g_gop = gop;
-    for(UINT32 i = 0; i < gop->Mode->MaxMode; i++) {
-        UINTN info_size;
-        EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
-        EFI_STATUS status = gop->QueryMode(gop, i, &info_size, &info);
-        if(EFI_ERROR(status)) continue;
-        if(info->HorizontalResolution != target_width || info->VerticalResolution != target_height) continue;
-        gop->SetMode(gop, i);
-        g_fb_width = g_gop->Mode->Info->HorizontalResolution;
-        g_fb_height = g_gop->Mode->Info->VerticalResolution;
-        g_fb_initialized = true;
-        return EFI_SUCCESS;
-    }
-    return EFI_UNSUPPORTED;
-}
-#endif
-
 #if defined __BIOS && defined __AMD64
 
 static uint32_t g_fb_base;
@@ -136,6 +112,30 @@ void fb_initialize(uint16_t target_width, uint16_t target_height) {
     // }
 }
 
+#elif defined __UEFI
+EFI_GRAPHICS_OUTPUT_PROTOCOL *g_gop;
+
+#define FB_BASE g_gop->Mode->FrameBufferBase
+#define PITCH g_gop->Mode->Info->PixelsPerScanLine
+
+EFI_STATUS fb_initialize(EFI_GRAPHICS_OUTPUT_PROTOCOL *gop, UINTN target_width, UINTN target_height) {
+    g_gop = gop;
+    for(UINT32 i = 0; i < gop->Mode->MaxMode; i++) {
+        UINTN info_size;
+        EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
+        EFI_STATUS status = gop->QueryMode(gop, i, &info_size, &info);
+        if(EFI_ERROR(status)) continue;
+        if(info->HorizontalResolution != target_width || info->VerticalResolution != target_height) continue;
+        gop->SetMode(gop, i);
+        g_fb_width = g_gop->Mode->Info->HorizontalResolution;
+        g_fb_height = g_gop->Mode->Info->VerticalResolution;
+        g_fb_initialized = true;
+        return EFI_SUCCESS;
+    }
+    return EFI_UNSUPPORTED;
+}
+#else
+#error Invalid target or missing implementation
 #endif
 
 void fb_char(int cx, int cy, char c, uint32_t color) {

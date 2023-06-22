@@ -33,9 +33,7 @@ EFI_HANDLE g_imagehandle;
     if(EFI_ERROR(status)) log_panic("CORE", "Unable to locate GOP protocol");
     status = fb_initialize(gop, 1920, 1080);
     if(EFI_ERROR(status)) log_panic("CORE", "Unable to initialize a GOP");
-#endif
-
-#if defined __BIOS && defined __AMD64
+#elif defined __BIOS && defined __AMD64
 typedef int SYMBOL[];
 
 extern SYMBOL __tartarus_start;
@@ -43,6 +41,8 @@ extern SYMBOL __tartarus_end;
 
 [[noreturn]] void core() {
     fb_initialize(1920, 1080);
+#else
+#error Invalid target
 #endif
     pmm_initialize();
 #ifdef __AMD64

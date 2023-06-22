@@ -7,9 +7,6 @@
 #if defined __BIOS && defined __AMD64
 #include <int.h>
 #endif
-#ifdef __UEFI
-#include <efi.h>
-#endif
 
 disk_t *g_disks;
 
@@ -204,9 +201,7 @@ bool disk_write_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *
     }
     return false;
 }
-#endif
-
-#ifdef __UEFI
+#elif defined __UEFI
 void disk_initialize() {
     UINTN buffer_size = 0;
     EFI_HANDLE *buffer = NULL;
@@ -246,6 +241,8 @@ bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *d
 bool disk_write_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *src) {
     return EFI_ERROR(disk->io->WriteBlocks(disk->io, disk->io->Media->MediaId, lba, sector_count * disk->sector_size, src));
 }
+#else
+#error Invalid target or missing implementation
 #endif
 
 void disk_read(disk_part_t *part, uint64_t offset, uint64_t count, void *dest) {

@@ -5,9 +5,7 @@
 #include <log.h>
 
 #define FOUR_GB 0x100000000
-#define HHDM_OFFSET 0xFFFF800000000000
 
-#ifdef __AMD64
 #define LEVELS 4
 
 #define PT_PRESENT (1 << 0)
@@ -62,4 +60,3 @@ vmm_address_space_t vmm_initialize() {
     // TODO: Map memory map entries past 4GB
     return map;
 }
-#endif

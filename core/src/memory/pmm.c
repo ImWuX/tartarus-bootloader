@@ -273,9 +273,7 @@ void pmm_initialize() {
 
     map_sanitize();
 }
-#endif
-
-#ifdef __UEFI
+#elif defined __UEFI
 void pmm_initialize() {
     UINTN map_size = 0;
     EFI_MEMORY_DESCRIPTOR *map = NULL;
@@ -355,4 +353,6 @@ void pmm_initialize() {
         }
     }
 }
+#else
+#error Invalid target or missing implementation
 #endif

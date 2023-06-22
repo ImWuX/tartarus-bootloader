@@ -36,7 +36,7 @@ acpi_sdt_header_t *acpi_find_table(acpi_rsdp_t *rsdp, const char *signature) {
     return 0;
 }
 
-#ifdef __BIOS
+#if defined __BIOS && defined __AMD64
 #define RSDP_FIXED_REGION_BASE 0xE0000
 #define RSDP_FIXED_REGION_END 0xFFFFF
 #define RSDP_IDENTIFIER 0x2052545020445352 // "RSD PTR "
@@ -61,9 +61,7 @@ acpi_rsdp_t *acpi_find_rsdp() {
     if(!address) address = scan_region(RSDP_FIXED_REGION_BASE, RSDP_FIXED_REGION_END);
     return (acpi_rsdp_t *) address;
 }
-#endif
-
-#ifdef __UEFI
+#elif defined __UEFI
 static bool compare_guid(EFI_GUID a, EFI_GUID b) {
     bool data4_match = true;
     for(int i = 0; i < 8; i++) if(a.Data4[i] != b.Data4[i]) data4_match = false;
@@ -86,4 +84,6 @@ acpi_rsdp_t *acpi_find_rsdp() {
     if(!address) address = find_table(v1);
     return (acpi_rsdp_t *) address;
 }
+#else
+#error Invalid target or missing implementation
 #endif

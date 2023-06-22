@@ -106,14 +106,15 @@ void log_putchar(char c) {
             g_y = 0;
         }
     } else {
-#ifdef __UEFI
-        CHAR16 tmp[2] = { c, 0 };
-        g_st->ConOut->OutputString(g_st->ConOut, (CHAR16 *) &tmp);
-#endif
 #if defined __BIOS && defined __AMD64
         int_regs_t regs = { .eax = (0xE << 8) | c };
         int_exec(0x10, &regs);
         if(c == '\n') log_putchar('\r');
+#elif defined __UEFI
+        CHAR16 tmp[2] = { c, 0 };
+        g_st->ConOut->OutputString(g_st->ConOut, (CHAR16 *) &tmp);
+#else
+#error Invalid target or missing implementation
 #endif
     }
 }
