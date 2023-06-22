@@ -13,12 +13,17 @@ extern void *protocol_tartarus_bios_handoff(uint32_t boot_info);
 extern void *protocol_tartarus_uefi_handoff(uint64_t boot_info);
 #endif
 
-[[noreturn]] void protocol_tartarus_handoff(tartarus_elf_image_t *kernel, acpi_rsdp_t *rsdp, vmm_address_space_t address_space) {
+[[noreturn]] void protocol_tartarus_handoff(tartarus_elf_image_t *kernel, acpi_rsdp_t *rsdp, vmm_address_space_t address_space, fb_t *framebuffer) {
     asm volatile("mov %0, %%cr3" : : "r" (address_space));
 
     tartarus_boot_info_t *boot_info = heap_alloc(sizeof(tartarus_boot_info_t));
     boot_info->kernel_image = *kernel;
-    boot_info->acpi_rsdp = (uintptr_t) rsdp;
+    boot_info->acpi_rsdp = (tartarus_addr_t) (uintptr_t) rsdp;
+    boot_info->framebuffer.address = (tartarus_addr_t) framebuffer->address;
+    boot_info->framebuffer.size = (tartarus_uint_t) framebuffer->size;
+    boot_info->framebuffer.width = (tartarus_uint_t) framebuffer->width;
+    boot_info->framebuffer.height = (tartarus_uint_t) framebuffer->height;
+    boot_info->framebuffer.pitch = (tartarus_uint_t) framebuffer->pitch;
 
 #if defined __BIOS
     protocol_tartarus_bios_handoff((uint32_t) boot_info);

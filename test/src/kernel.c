@@ -38,6 +38,16 @@ void kmain(tartarus_boot_info_t *boot_info) {
     print_number(boot_info->kernel_image.size, 16);
     print("\n    ACPI RSDP: ");
     print_number(boot_info->acpi_rsdp, 16);
+    print("\n    FB ADDR: ");
+    print_number(boot_info->framebuffer.address, 16);
+    print("\n    FB SIZE: ");
+    print_number(boot_info->framebuffer.size, 16);
+    print("\n    FB WIDTH: ");
+    print_number(boot_info->framebuffer.width, 10);
+    print("\n    FB HEIGHT: ");
+    print_number(boot_info->framebuffer.height, 10);
+    print("\n    FB PITCH: ");
+    print_number(boot_info->framebuffer.pitch, 10);
 
     while(true);
 }

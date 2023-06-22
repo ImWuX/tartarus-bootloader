@@ -3,16 +3,23 @@
 
 #include <stdint.h>
 
-typedef uint64_t tartarus_paddr_t;
-typedef uint64_t tartarus_vaddr_t;
+typedef uint64_t tartarus_addr_t;
 typedef uint64_t tartarus_uint_t;
 
 typedef struct {
-    tartarus_paddr_t paddr;
-    tartarus_vaddr_t vaddr;
+    tartarus_addr_t paddr;
+    tartarus_addr_t vaddr;
     tartarus_uint_t size;
-    tartarus_vaddr_t entry;
+    tartarus_addr_t entry;
 } tartarus_elf_image_t;
+
+typedef struct {
+    tartarus_addr_t address;
+    tartarus_uint_t size;
+    tartarus_uint_t width;
+    tartarus_uint_t height;
+    tartarus_uint_t pitch;
+} tartarus_fb_t;
 
 typedef enum {
     TARTARUS_MEMAP_TYPE_USABLE = 0,
@@ -24,14 +31,15 @@ typedef enum {
 } tartarus_mmap_type_t;
 
 typedef struct {
-    tartarus_paddr_t base;
+    tartarus_addr_t base;
     tartarus_uint_t length;
     tartarus_mmap_type_t type;
 } tartarus_mmap_entry_t;
 
 typedef struct {
     tartarus_elf_image_t kernel_image;
-    tartarus_paddr_t acpi_rsdp;
+    tartarus_addr_t acpi_rsdp;
+    tartarus_fb_t framebuffer;
 } tartarus_boot_info_t;
 
 #endif

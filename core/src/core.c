@@ -98,6 +98,6 @@ extern SYMBOL __tartarus_end;
 
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
-    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space);
+    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space, &initial_fb);
     log_panic("CORE", "Invalid protocol %s\n", protocol);
 }

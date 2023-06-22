@@ -162,10 +162,10 @@ tartarus_elf_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_spa
     }
 
     tartarus_elf_image_t *image = heap_alloc(sizeof(tartarus_elf_image_t));
-    image->paddr = (tartarus_paddr_t) (uintptr_t) paddr;
-    image->vaddr = (tartarus_vaddr_t) base_address;
+    image->paddr = (tartarus_addr_t) (uintptr_t) paddr;
+    image->vaddr = (tartarus_addr_t) base_address;
     image->size = (tartarus_uint_t) size;
-    image->entry = (tartarus_vaddr_t) header->entry;
+    image->entry = (tartarus_addr_t) header->entry;
 
     heap_free(program_header);
     heap_free(header);
