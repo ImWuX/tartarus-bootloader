@@ -3,23 +3,29 @@
 
 #include <stdint.h>
 
-typedef uint64_t tartarus_addr_t;
-typedef uint64_t tartarus_uint_t;
+#define __TARTARUS_PACKED __attribute__((packed))
+
+#ifndef __TARTARUS_ARCH_OVERRIDE
+#if defined __x86_64__ || defined __i386__ || defined _M_X64 || defined _M_IX86
+#ifndef __AMD64
+#define __AMD64
+#endif
+#endif
+#endif
+
+#ifdef __TARTARUS_NO_PTR
+#define __TARTARUS_PTR(TYPE) uint64_t
+#else
+#define __TARTARUS_PTR(TYPE) TYPE
+#endif
 
 typedef struct {
-    tartarus_addr_t paddr;
-    tartarus_addr_t vaddr;
-    tartarus_uint_t size;
-    tartarus_addr_t entry;
-} tartarus_elf_image_t;
-
-typedef struct {
-    tartarus_addr_t address;
-    tartarus_uint_t size;
-    tartarus_uint_t width;
-    tartarus_uint_t height;
-    tartarus_uint_t pitch;
-} tartarus_fb_t;
+    __TARTARUS_PTR(void *) address;
+    uint64_t size;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pitch;
+} __TARTARUS_PACKED tartarus_fb_t;
 
 typedef enum {
     TARTARUS_MEMAP_TYPE_USABLE = 0,
@@ -31,17 +37,32 @@ typedef enum {
 } tartarus_mmap_type_t;
 
 typedef struct {
-    tartarus_addr_t base;
-    tartarus_uint_t length;
+    uint64_t base;
+    uint64_t length;
     tartarus_mmap_type_t type;
-} tartarus_mmap_entry_t;
+} __TARTARUS_PACKED tartarus_mmap_entry_t;
+
+#ifdef __AMD64
+typedef struct {
+uint8_t apic_id;
+__TARTARUS_PTR(uint64_t *) wake_on_write;
+} __TARTARUS_PACKED tartarus_cpu_t;
+#else
+#error Invalid arch or missing implementation
+#endif
 
 typedef struct {
-    tartarus_elf_image_t kernel_image;
-    tartarus_addr_t acpi_rsdp;
+    uint64_t kernel_vaddr;
+    uint64_t kernel_paddr;
+    uint64_t kernel_size;
+    __TARTARUS_PTR(void *) acpi_rsdp;
     tartarus_fb_t framebuffer;
-    tartarus_addr_t memory_map;
-    tartarus_uint_t memory_map_size;
-} tartarus_boot_info_t;
+    __TARTARUS_PTR(tartarus_mmap_entry_t *) memory_map;
+    uint16_t memory_map_size;
+    uint64_t hhdm_base;
+    uint8_t bsp_index;
+    uint8_t cpu_count;
+    __TARTARUS_PTR(tartarus_cpu_t *) cpus;
+} __TARTARUS_PACKED tartarus_boot_info_t;
 
 #endif

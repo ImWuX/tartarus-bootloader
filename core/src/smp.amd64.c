@@ -5,6 +5,7 @@
 #include <libc.h>
 #include <log.h>
 #include <memory/pmm.h>
+#include <memory/heap.h>
 #include <gdt.h>
 
 #define CYCLES_10MIL 10000000
@@ -57,16 +58,17 @@ typedef int SYMBOL[];
 extern SYMBOL g_initap_start;
 extern SYMBOL g_initap_end;
 
-void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *pml4) {
+smp_cpu_t *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *pml4) {
     madt_t *madt = (madt_t *) sdt;
     uint8_t bsp_id = lapic_bsp();
+    smp_cpu_t *cpus = 0;
 
     size_t apinit_size = (uintptr_t) g_initap_end - (uintptr_t) g_initap_start;
     if(apinit_size + sizeof(ap_info_t) > PAGE_SIZE) log_panic("SMP", "Unable to fit initap into a page");
     memcpy((void *) reserved_page, (void *) g_initap_start, apinit_size);
 
-    void *woa_page = pmm_alloc_page(PMM_AREA_MAX);
-    memset(woa_page, 0, PAGE_SIZE);
+    void *wow_page = pmm_alloc_page(PMM_AREA_MAX);
+    memset(wow_page, 0, PAGE_SIZE);
 
     ap_info_t *ap_info = (ap_info_t *) (reserved_page + apinit_size);
     ap_info->pml4 = (uint32_t) (uintptr_t) pml4;
@@ -79,10 +81,19 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
         switch(record->type) {
             case MADT_LAPIC:
                 madt_record_lapic_t *lapic_record = (madt_record_lapic_t *) record;
-                if(lapic_record->lapic_id == bsp_id) break;
+                smp_cpu_t *cpu = heap_alloc(sizeof(smp_cpu_t));
+                cpu->acpi_id = lapic_record->acpi_processor_id;
+                cpu->apic_id = lapic_record->lapic_id;
+                cpu->is_bsp = false;
+                if(lapic_record->lapic_id == bsp_id) {
+                    cpu->is_bsp = true;
+                    goto success;
+                }
+                uint64_t *wow =  (uint64_t *) ((uintptr_t) wow_page + lapic_record->lapic_id * 16);
+                cpu->wake_on_write = wow;
                 ap_info->init = 0;
                 ap_info->apic_id = lapic_record->lapic_id;
-                ap_info->wait_on_address = (uint64_t) ((uintptr_t) woa_page + ap_info->apic_id * 16);
+                ap_info->wait_on_address = (uint64_t) (uintptr_t) wow;
                 ap_info->heap = (uint32_t) (uintptr_t) pmm_alloc(PMM_AREA_EXTENDED, 4) + PAGE_SIZE * 4;
 
                 lapic_write(LAPIC_REG_ICR2, lapic_record->lapic_id << 24);
@@ -97,21 +108,21 @@ void *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, void *
                     tsc_block(CYCLES_10MIL);
                     uint8_t value = 0;
                     asm volatile("lock xadd %0, %1" : "+r" (value) : "m" (ap_info->init) : "memory");
-                    if(value > 0) {
-                        log(">> LAPIC(%i) Initialized\n", (uint64_t) lapic_record->lapic_id);
-                        goto success;
-                    }
+                    if(value > 0) goto success;
                 }
-
-                log(">> LAPIC(%i) Failed to initialize\n", (uint64_t) lapic_record->lapic_id);
+                log_warning("SMP", ">> LAPIC(%i) Failed to initialize\n", (uint64_t) lapic_record->lapic_id);
+                heap_free(cpu);
+                break;
                 success:
+                cpu->next = cpus;
+                cpus = cpu;
                 break;
             case MADT_LX2APIC:
-                log_panic("SMP", "x2APIC is not currently supported");
+                log_warning("SMP", "x2APIC is not currently supported, ignoring MADT entry\n");
                 break;
         }
         count += record->length;
     }
 
-    return woa_page;
+    return cpus;
 }

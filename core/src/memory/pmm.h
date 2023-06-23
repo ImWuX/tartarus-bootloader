@@ -19,7 +19,7 @@ typedef enum {
     PMM_AREA_MAX
 } pmm_area_t;
 
-extern int g_pmm_map_size;
+extern uint16_t g_pmm_map_size;
 extern tartarus_mmap_entry_t g_pmm_map[MAX_MEMAP_ENTRIES];
 
 void pmm_initialize();

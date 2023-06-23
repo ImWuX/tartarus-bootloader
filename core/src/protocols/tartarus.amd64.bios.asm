@@ -3,6 +3,10 @@ global protocol_tartarus_bios_handoff
 bits 32
 protocol_tartarus_bios_handoff:
     mov eax, dword [esp + 4]
+    mov dword [kernel_entry], eax
+    mov eax, dword [esp + 8]
+    mov dword [kernel_entry + 4], eax
+    mov eax, dword [esp + 12]
     mov dword [boot_info], eax
 
     mov eax, cr4
@@ -43,9 +47,9 @@ entry_long:
 
     xor rdi, rdi
     mov edi, dword [boot_info]                  ; Boot info
-    mov rax, qword [edi + 24]                   ; Boot info + 24 = entry address
     push qword 0                                ; Push an invalid return address
     xor rbp, rbp                                ; Invalid stack frame
-    jmp rax
+    jmp qword [kernel_entry]
 
 boot_info: dd 0
+kernel_entry: dq 0

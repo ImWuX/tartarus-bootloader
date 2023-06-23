@@ -17,14 +17,6 @@
 
 #define XINDEX 0xFFFF
 
-typedef uint64_t elf64_addr_t;
-typedef uint64_t elf64_off_t;
-typedef uint16_t elf64_half_t;
-typedef uint32_t elf64_word_t;
-typedef int32_t elf64_sword_t;
-typedef uint64_t elf64_xword_t;
-typedef int64_t elf64_sxword_t;
-
 typedef struct {
     uint8_t file_identifier[4];
     uint8_t class;
@@ -75,7 +67,7 @@ typedef enum {
     PT_TLS
 } segment_types_t;
 
-tartarus_elf_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_space) {
+elf_loaded_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_space) {
     elf64_header_t *header = heap_alloc(sizeof(elf64_header_t));
     if(fat_read(file, 0, sizeof(elf64_header_t), header) != sizeof(elf64_header_t)) log_panic("ELF", "Unable to read header from ELF");
 
@@ -161,11 +153,11 @@ tartarus_elf_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_spa
         }
     }
 
-    tartarus_elf_image_t *image = heap_alloc(sizeof(tartarus_elf_image_t));
-    image->paddr = (tartarus_addr_t) (uintptr_t) paddr;
-    image->vaddr = (tartarus_addr_t) base_address;
-    image->size = (tartarus_uint_t) size;
-    image->entry = (tartarus_addr_t) header->entry;
+    elf_loaded_image_t *image = heap_alloc(sizeof(elf_loaded_image_t));
+    image->paddr = (elf64_addr_t) (uintptr_t) paddr;
+    image->vaddr = base_address;
+    image->size = size;
+    image->entry = header->entry;
 
     heap_free(program_header);
     heap_free(header);

@@ -24,7 +24,7 @@ static region_t regions[] = {
     { .bottom_boundary = 0x100000,  .top_boundary = UINTPTR_MAX }
 };
 
-int g_pmm_map_size;
+uint16_t g_pmm_map_size;
 tartarus_mmap_entry_t g_pmm_map[MAX_MEMAP_ENTRIES];
 
 static void map_insert(int index, tartarus_mmap_entry_t entry) {

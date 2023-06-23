@@ -79,11 +79,12 @@ extern SYMBOL __tartarus_end;
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
     vmm_address_space_t address_space = vmm_initialize();
+    smp_cpu_t *cpus;
 #ifdef __AMD64
     if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
     acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
     if(!madt) log_panic("CORE", "No MADT table present");
-    uint64_t *woa = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, address_space);
+    cpus = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, address_space);
 #endif
 
     char *kernel_name;
@@ -91,13 +92,13 @@ extern SYMBOL __tartarus_end;
     fat_file_t *kernel = fat_root_lookup(cfg->info, kernel_name);
     if(!kernel) log_panic("CORE", "Could not find the kernel (%s)\n", kernel_name);
 
-    tartarus_elf_image_t *kernel_image = elf_load(kernel, address_space);
+    elf_loaded_image_t *kernel_image = elf_load(kernel, address_space);
     if(!kernel_image) log_panic("CORE", "Failed to load kernel\n");
     if(!kernel_image->entry) log_panic("CORE", "Kernel has no entry point\n");
     log("Kernel Loaded\n");
 
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
-    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size);
+    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, cpus);
     log_panic("CORE", "Invalid protocol %s\n", protocol);
 }

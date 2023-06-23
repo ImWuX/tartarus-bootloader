@@ -70,7 +70,7 @@ endif
 
 # FLAGS ( bios )
 ifeq ($(TARGET), amd64-bios)
-    DEFINES += -D __BIOS
+    DEFINES += -D __BIOS -D __TARTARUS_NO_PTR
     CFLAGS += -mgeneral-regs-only
 endif
 
@@ -88,8 +88,8 @@ ifeq ($(TARGET), amd64-uefi64)
 endif
 
 # FLAGS ( uefi32 )
-ifeq ($(TARGET), amd64-uefi64)
-    DEFINES += -D __UEFI64
+ifeq ($(TARGET), amd64-uefi32)
+    DEFINES += -D __UEFI32 -D __TARTARUS_NO_PTR
 endif
 
 # BUILD amd64-bios

@@ -16,7 +16,8 @@ protocol_tartarus_uefi_handoff:
     or eax, (1 << 11)                           ; Set NX
     wrmsr
 .noxd:
-    mov rax, qword [rdi + 24]                   ; Boot info + 24 = entry address
+    mov rax, qword [rdi]                        ; Set rax to entry address
+    mov rdi, rsi                                ; Move boot_info into rdi
     push qword 0                                ; Push an invalid return address
     xor rbp, rbp                                ; Invalid stack frame
     jmp rax
