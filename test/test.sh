@@ -1,7 +1,7 @@
 #!/bin/bash
 
 make testkernel.elf clean
-mv testkernel.elf basedir/kernel.elf
+mv testkernel.elf basedir/sys/kernel.elf
 
 case $@ in
     bios)

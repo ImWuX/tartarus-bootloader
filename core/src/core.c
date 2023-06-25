@@ -10,6 +10,7 @@
 #include <drivers/disk.h>
 #include <drivers/acpi.h>
 #include <fs/fat.h>
+#include <fs/path.h>
 #include <elf.h>
 #include <config.h>
 #include <smp.h>
@@ -110,7 +111,7 @@ extern SYMBOL __tartarus_end;
 
     char *kernel_name;
     if(config_get_string_ext(cfg, "KERNEL", &kernel_name)) log_panic("CORE", "No kernel file specified");
-    fat_file_t *kernel = fat_root_lookup(cfg->info, kernel_name);
+    fat_file_t *kernel = (fat_file_t *) path_resolve(kernel_name, cfg->info, (void *(*)(void *fs, const char *name)) fat_root_lookup, (void *(*)(void *fs, const char *name)) fat_dir_lookup);
     if(!kernel) log_panic("CORE", "Could not find the kernel (%s)\n", kernel_name);
 
     elf_loaded_image_t *kernel_image = elf_load(kernel, address_space);
