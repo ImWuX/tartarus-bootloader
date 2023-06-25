@@ -123,6 +123,33 @@ typedef struct {
     uint32_t edd_address;
 } __attribute__((packed)) ext_read_drive_params_t;
 
+static uint16_t estimate_sector_size(uint8_t disk_id, ext_read_drive_params_t *params, uint8_t test_val) {
+    uint8_t *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, 3);
+    memset(buf, test_val, PAGE_SIZE * 3);
+    disk_address_packet_t dap = {
+        .size = sizeof(disk_address_packet_t),
+        .sector_count = 1,
+        .memory_segment = int_16bit_segment(buf),
+        .memory_offset = int_16bit_offset(buf),
+        .disk_lba = 0
+    };
+    int_regs_t regs = {
+        .eax = (0x42 << 8),
+        .edx = disk_id,
+        .ds = int_16bit_segment(&dap),
+        .esi = int_16bit_offset(&dap)
+    };
+    int_exec(0x13, &regs);
+    if(regs.eflags & EFLAGS_CF) {
+        pmm_free(buf, 3);
+        return 0;
+    }
+    int size = 0;
+    for(int i = 0; i < PAGE_SIZE * 3; i++) if(buf[i] != test_val) size = i;
+    pmm_free(buf, 3);
+    return size + 1;
+}
+
 void disk_initialize() {
     for(int i = 0x80; i < 0xFF; i++) {
         ext_read_drive_params_t params = { .size = sizeof(ext_read_drive_params_t) };
@@ -135,14 +162,18 @@ void disk_initialize() {
         int_exec(0x13, &regs);
         if(regs.eflags & EFLAGS_CF) continue;
 
+        uint16_t first_estimation = estimate_sector_size(i, &params, 0);
+        uint16_t second_estimation = estimate_sector_size(i, &params, 123);
+        uint16_t calculated_sector_size = first_estimation > second_estimation ? first_estimation : second_estimation;
+
         disk_t *disk = heap_alloc(sizeof(disk_t));
         disk->id = i;
-        disk->sector_size = params.sector_size; // TODO: The sector size provided by BIOS is unreliable. We can manually figure out the size by reading into a filled buffer and empty buffer and figuring out where the last modified byte is.
+        disk->sector_size = calculated_sector_size != 0 ? calculated_sector_size : params.sector_size;
         disk->sector_count = params.abs_sectors;
 
         int buf_size = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
         void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
-        if(disk_read_sector(disk, 0, buf_size, buf)) {
+        if(buf_size == 0 || disk_read_sector(disk, 0, buf_size, buf)) {
             heap_free(disk);
             continue;
         }
