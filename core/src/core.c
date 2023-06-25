@@ -15,7 +15,23 @@
 #include <smp.h>
 #include <protocols/tartarus.h>
 #ifdef __AMD64
+#include <cpuid.h>
+#include <drivers/msr.h>
 #include <drivers/lapic.h>
+#endif
+
+#ifdef __AMD64
+#define CPUID_NX (1 << 20)
+#define MSR_EFER 0xC0000080
+#define MSR_EFER_NX (1 << 11)
+
+bool g_nx = false;
+
+static bool cpuid_nx() {
+    unsigned int edx = 0, unused = 0;
+    if(__get_cpuid(0x80000001, &unused, &unused, &unused, &edx) == 0) return false;
+    return edx & CPUID_NX;
+}
 #endif
 
 #ifdef __UEFI
@@ -42,6 +58,11 @@ extern SYMBOL __tartarus_end;
 [[noreturn]] void core() {
 #else
 #error Invalid target
+#endif
+#ifdef __AMD64
+    g_nx = cpuid_nx();
+    if(g_nx) msr_write(MSR_EFER, msr_read(MSR_EFER) | MSR_EFER_NX);
+    else log_warning("CORE", "CPU does not support EFER.NXE\n");
 #endif
     fb_t initial_fb;
     if(fb_aquire(1920, 1080, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");

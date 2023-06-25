@@ -54,7 +54,7 @@ bits 32
 
     mov ecx, 0xC0000080
     rdmsr
-    or eax, 1 << 8                                          ; Set long mode bit
+    or eax, (1 << 8)                                        ; Set long mode bit
     wrmsr
 
     mov eax, cr0
@@ -68,13 +68,8 @@ bits 32
 
 .long:
 bits 64
-    push rbx                                                ; CPUID will override the offset in ebx
-    mov eax, 0x80000001
-    cpuid
-    test edx, (1 << 20)                                     ; Check for NX
-    pop rbx
-    jz short .noxd
-
+    cmp byte [off(boot_info.set_nx)], 0
+    je .noxd
     mov ecx, 0xC0000080
     rdmsr
     or eax, (1 << 11)                                       ; Set NX bit
@@ -109,3 +104,4 @@ boot_info:
     .gdtr:
         dw 0
         dd 0
+    .set_nx: db 0

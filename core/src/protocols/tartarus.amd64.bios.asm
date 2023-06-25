@@ -33,17 +33,7 @@ entry_long:
     mov fs, rax
     mov gs, rax
 
-    mov eax, 0x80000001
-    cpuid
-    test edx, 1 << 20
-    jz .noxd
-
-    mov ecx, 0xC0000080
-    rdmsr
-    or eax, (1 << 11)                           ; Set NX
-    wrmsr
-.noxd:
-    cld                                         ; Clear direction flag
+    cld
 
     xor rdi, rdi
     mov edi, dword [boot_info]                  ; Boot info

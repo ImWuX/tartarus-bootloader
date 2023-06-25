@@ -54,6 +54,20 @@ void kmain(tartarus_boot_info_t *boot_info) {
     print_number(boot_info->memory_map_size, 10);
     print("\n    HHDM BASE: ");
     print_number(boot_info->hhdm_base, 16);
+    for(int i = 0; i < boot_info->memory_map_size; i++) {
+        print("\n    MEMAP(");
+        print_number(i, 10);
+        print(") [");
+        print_number(boot_info->memory_map[i].type, 10);
+        print("] ");
+        print_number(boot_info->memory_map[i].base, 16);
+        print(" + ");
+        print_number(boot_info->memory_map[i].length, 16);
+    }
+    print("\n    BSP INDEX: ");
+    print_number(boot_info->bsp_index, 10);
+    print("\n    CPU COUNT: ");
+    print_number(boot_info->cpu_count, 10);
     for(int i = 0; i < boot_info->cpu_count; i++) {
         print("\n    CPU(");
         print_number(i, 10);

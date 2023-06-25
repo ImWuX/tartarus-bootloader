@@ -4,26 +4,37 @@ ENTRY(kmain)
 
 ld_kernel_start = 0xFFFFFFFF80000000;
 
+PHDRS
+{
+    text    PT_LOAD FLAGS((1 << 0) | (1 << 2));
+    data    PT_LOAD FLAGS((1 << 1) | (1 << 2));
+    rodata  PT_LOAD FLAGS((1 << 2));
+}
+
 SECTIONS
 {
     . = ld_kernel_start;
 
     .text : {
         *(.text .text.*)
-    }
+    } :text
 
-    .data : {
-        *(.data .data.*)
-    }
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
 
     .rodata : {
         *(.rodata .rodata.*)
-    }
+    } :rodata
+
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
+
+    .data : {
+        *(.data .data.*)
+    } :data
 
     .bss : {
         *(COMMON)
         *(.bss .bss.*)
-    }
+    } :data
 
     ld_kernel_end = .;
 

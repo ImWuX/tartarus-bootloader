@@ -17,6 +17,10 @@
 
 #define XINDEX 0xFFFF
 
+#define PF_X (1 << 0)
+#define PF_W (1 << 1)
+#define PF_R (1 << 2)
+
 typedef struct {
     uint8_t file_identifier[4];
     uint8_t class;
@@ -115,47 +119,45 @@ elf_loaded_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_space
 
     elf64_program_header_t *program_header = heap_alloc(sizeof(elf64_program_header_t));
 
-    elf64_addr_t base_address = UINT64_MAX;
+    elf64_addr_t lowest_vaddr = UINT64_MAX;
+    elf64_addr_t highest_vaddr = 0;
     for(int i = 0; i < header->program_header_entry_count; i++) {
         if(fat_read(file, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, program_header) != header->program_header_entry_size) {
-            log_warning("ELF", "Unable to read program header %i while calculating base address\n", (uint64_t) i);
+            log_warning("ELF", "Unable to read program header %i\n", (uint64_t) i);
             goto fail_pheader;
         }
-        if(program_header->vaddr < base_address) base_address = program_header->vaddr;
+        if(program_header->type != PT_LOAD || program_header->memsz == 0) continue;
+        if(program_header->vaddr < lowest_vaddr) lowest_vaddr = program_header->vaddr;
+        if(program_header->vaddr + program_header->memsz) highest_vaddr = program_header->vaddr + program_header->memsz;
     }
 
-    elf64_xword_t size = 0;
-    for(int i = 0; i < header->program_header_entry_count; i++) {
-        if(fat_read(file, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, program_header) != header->program_header_entry_size) {
-            log_warning("ELF", "Unable to read program header %i while calculating size\n", (uint64_t) i);
-            goto fail_pheader;
-        }
-        elf64_xword_t s = program_header->vaddr - base_address + program_header->memsz;
-        if(s > size) size = s;
-    }
-
+    elf64_xword_t size = highest_vaddr - lowest_vaddr;
     elf64_xword_t page_count = (size + PAGE_SIZE - 1) / PAGE_SIZE;
     void *paddr = pmm_alloc(PMM_AREA_MAX, page_count);
-    // TODO: Map segments with proper rights, allocate them pages away to do this, yada yada
-    vmm_map(address_space, (uint64_t) (uintptr_t) paddr, base_address, page_count * PAGE_SIZE);
 
     for(int i = 0; i < header->program_header_entry_count; i++) {
         if(fat_read(file, header->program_header_offset + header->program_header_entry_size * i, header->program_header_entry_size, program_header) != header->program_header_entry_size) {
             log_warning("ELF", "Unable to read program header %i while loading\n", (uint64_t) i);
-            goto fail_pheader;
+            goto fail_pheader2;
         }
-        void *addr = paddr + (program_header->vaddr - base_address);
+        if(program_header->type != PT_LOAD || program_header->memsz == 0) continue;
+
+        void *addr = paddr + (program_header->vaddr - lowest_vaddr);
         memset(addr, 0, program_header->memsz);
 
+        elf64_addr_t aligned_vaddr = program_header->vaddr - program_header->vaddr % PAGE_SIZE;
+        elf64_xword_t aligned_size = (program_header->memsz + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
+        // VMM flags intentionally match the bottom 3 bits of elf flags :)
+        vmm_map(address_space, (uint64_t) (uintptr_t) addr, aligned_vaddr, aligned_size, program_header->flags & 0b111);
         if(fat_read(file, program_header->offset, program_header->filesz, addr) != program_header->filesz) {
             log_warning("ELF", "Unable to read program segment %i\n", (uint64_t) i);
-            goto fail_pheader;
+            goto fail_pheader2;
         }
     }
 
     elf_loaded_image_t *image = heap_alloc(sizeof(elf_loaded_image_t));
     image->paddr = (elf64_addr_t) (uintptr_t) paddr;
-    image->vaddr = base_address;
+    image->vaddr = lowest_vaddr;
     image->size = size;
     image->entry = header->entry;
 
@@ -163,6 +165,8 @@ elf_loaded_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_space
     heap_free(header);
     return image;
 
+    fail_pheader2:
+    pmm_free(paddr, page_count);
     fail_pheader:
     heap_free(program_header);
     fail_header:

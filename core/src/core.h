@@ -12,4 +12,8 @@ extern EFI_HANDLE g_imagehandle;
 extern EFI_GRAPHICS_OUTPUT_PROTOCOL *g_gop;
 #endif
 
+#ifdef __AMD64
+extern bool g_nx;
+#endif
+
 #endif

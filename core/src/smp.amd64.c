@@ -7,6 +7,7 @@
 #include <memory/pmm.h>
 #include <memory/heap.h>
 #include <gdt.h>
+#include <core.h>
 
 #define CYCLES_10MIL 10000000
 #define PAGE_SIZE 0x1000
@@ -51,6 +52,7 @@ typedef struct {
     uint32_t heap;
     uint16_t gdtr_limit;
     uint32_t gdtr_base;
+    uint8_t set_nx;
 } __attribute__((packed)) ap_info_t;
 
 typedef int SYMBOL[];
@@ -74,6 +76,7 @@ smp_cpu_t *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, v
     ap_info->pml4 = (uint32_t) (uintptr_t) pml4;
     ap_info->gdtr_limit = g_gdtr.limit;
     ap_info->gdtr_base = (uint32_t) g_gdtr.base;
+    ap_info->set_nx = g_nx;
 
     uint32_t count = 0;
     while(count < madt->sdt_header.length) {

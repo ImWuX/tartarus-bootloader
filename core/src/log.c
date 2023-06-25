@@ -37,6 +37,10 @@ static void log_list(char *str, va_list args) {
                     char *s = va_arg(args, char *);
                     while(*s) log_putchar(*s++);
                     break;
+                case 'c':
+                    char c = (char) va_arg(args, int);
+                    log_putchar(c);
+                    break;
                 case 'x':
                     log_putchar('0');
                     log_putchar('x');
@@ -46,10 +50,10 @@ static void log_list(char *str, va_list args) {
                     numprint(va_arg(args, uint64_t), 10);
                     break;
                 default:
-                    escaped = false;
                     log_putchar(*str);
                     break;
             }
+            escaped = false;
         } else if(*str == '%') {
             escaped = true;
         } else {
