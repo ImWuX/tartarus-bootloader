@@ -123,7 +123,7 @@ typedef struct {
     uint32_t edd_address;
 } __attribute__((packed)) ext_read_drive_params_t;
 
-static uint16_t estimate_sector_size(uint8_t disk_id, ext_read_drive_params_t *params, uint8_t test_val) {
+static uint16_t estimate_sector_size(uint8_t disk_id, uint8_t test_val) {
     uint8_t *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, 3);
     memset(buf, test_val, PAGE_SIZE * 3);
     disk_address_packet_t dap = {
@@ -162,8 +162,8 @@ void disk_initialize() {
         int_exec(0x13, &regs);
         if(regs.eflags & EFLAGS_CF) continue;
 
-        uint16_t first_estimation = estimate_sector_size(i, &params, 0);
-        uint16_t second_estimation = estimate_sector_size(i, &params, 123);
+        uint16_t first_estimation = estimate_sector_size(i, 0);
+        uint16_t second_estimation = estimate_sector_size(i, 123);
         uint16_t calculated_sector_size = first_estimation > second_estimation ? first_estimation : second_estimation;
 
         disk_t *disk = heap_alloc(sizeof(disk_t));
