@@ -15,6 +15,8 @@
     fb_t *framebuffer,
     tartarus_mmap_entry_t *map,
     uint16_t map_size,
+    uint64_t hhdm_base,
+    uint64_t hhdm_size,
     smp_cpu_t *cpus
 );
 

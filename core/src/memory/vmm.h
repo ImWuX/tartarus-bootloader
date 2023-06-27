@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#define HHDM_OFFSET 0xFFFF800000000000
-
 #define VMM_FLAG_EXEC (1 << 0)
 #define VMM_FLAG_WRITE (1 << 1)
 #define VMM_FLAG_READ (1 << 2)

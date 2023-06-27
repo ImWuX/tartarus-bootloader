@@ -60,6 +60,7 @@ typedef struct {
     __TARTARUS_PTR(tartarus_mmap_entry_t *) memory_map;
     uint16_t memory_map_size;
     uint64_t hhdm_base;
+    uint64_t hhdm_size;
     uint8_t bsp_index;
     uint8_t cpu_count;
     __TARTARUS_PTR(tartarus_cpu_t *) cpus;

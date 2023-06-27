@@ -54,6 +54,8 @@ void kmain(tartarus_boot_info_t *boot_info) {
     print_number(boot_info->memory_map_size, 10);
     print("\n    HHDM BASE: ");
     print_number(boot_info->hhdm_base, 16);
+    print("\n    HHDM SIZE: ");
+    print_number(boot_info->hhdm_size, 16);
     for(int i = 0; i < boot_info->memory_map_size; i++) {
         print("\n    MEMAP(");
         print_number(i, 10);

@@ -7,6 +7,7 @@
 #include <memory/pmm.h>
 #include <memory/vmm.h>
 #include <memory/heap.h>
+#include <memory/hhdm.h>
 #include <drivers/disk.h>
 #include <drivers/acpi.h>
 #include <fs/fat.h>
@@ -101,6 +102,8 @@ extern SYMBOL __tartarus_end;
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
     vmm_address_space_t address_space = vmm_initialize();
+    uint64_t hhdm_size = hhdm_map(address_space, HHDM_OFFSET);
+
     smp_cpu_t *cpus;
 #ifdef __AMD64
     if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
@@ -121,6 +124,6 @@ extern SYMBOL __tartarus_end;
 
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
-    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, cpus);
+    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, cpus);
     log_panic("CORE", "Invalid protocol %s\n", protocol);
 }

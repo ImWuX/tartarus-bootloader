@@ -5,8 +5,6 @@
 #include <log.h>
 #include <core.h>
 
-#define FOUR_GB 0x100000000
-
 #define LEVELS 4
 
 #define PT_PRESENT (1 << 0)
@@ -60,30 +58,7 @@ void vmm_map(vmm_address_space_t address_space, uint64_t paddr, uint64_t vaddr, 
 }
 
 vmm_address_space_t vmm_initialize() {
-    vmm_address_space_t map = pmm_alloc_page(PMM_AREA_MAX);
-    memset(map, 0, PAGE_SIZE);
-
-    // Map 2nd page to 4GB
-    vmm_map(map, PAGE_SIZE, PAGE_SIZE, FOUR_GB - PAGE_SIZE, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_EXEC);
-    vmm_map(map, PAGE_SIZE, HHDM_OFFSET + PAGE_SIZE, FOUR_GB - PAGE_SIZE, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_EXEC);
-
-    for(int i = 0; i < g_pmm_map_size; i++) {
-        if(g_pmm_map[i].base + g_pmm_map[i].length < FOUR_GB) continue;
-        uint64_t base = g_pmm_map[i].base;
-        uint64_t length = g_pmm_map[i].length;
-        if(base < FOUR_GB) {
-            length -= FOUR_GB - base;
-            base = FOUR_GB;
-        }
-        if(base % PAGE_SIZE != 0) {
-            length += base % PAGE_SIZE;
-            base -= base % PAGE_SIZE;
-        }
-        if(length % PAGE_SIZE != 0) {
-            length += PAGE_SIZE - length % PAGE_SIZE;
-        }
-        vmm_map(map, base, base, length, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_EXEC);
-        vmm_map(map, base, HHDM_OFFSET + base, length, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_EXEC);
-    }
-    return map;
+    vmm_address_space_t address_space = pmm_alloc_page(PMM_AREA_MAX);
+    memset(address_space, 0, PAGE_SIZE);
+    return address_space;
 }

@@ -28,6 +28,8 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     fb_t *framebuffer,
     tartarus_mmap_entry_t *map,
     uint16_t map_size,
+    uint64_t hhdm_base,
+    uint64_t hhdm_size,
     smp_cpu_t *cpus
 ) {
     asm volatile("mov %0, %%cr3" : : "r" (address_space));
@@ -57,7 +59,8 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     boot_info->framebuffer.pitch = framebuffer->pitch;
     boot_info->memory_map = BIT32_CAST(uint64_t) BIT32_CAST(uintptr_t) map;
     boot_info->memory_map_size = map_size;
-    boot_info->hhdm_base = HHDM_OFFSET;
+    boot_info->hhdm_base = hhdm_base;
+    boot_info->hhdm_size = hhdm_size;
     boot_info->bsp_index = bsp_index;
     boot_info->cpu_count = cpu_count;
     boot_info->cpus = BIT32_CAST(uint64_t) BIT32_CAST(uintptr_t) cpu_array;
