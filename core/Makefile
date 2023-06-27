@@ -3,16 +3,11 @@ ifndef TARGET
     $(error TARGET is not specified)
 endif
 
-EFIDIR ?=
-ifeq ($(TARGET), $(filter $(TARGET), amd64-uefi32 amd64-uefi64))
-    ifndef EFIDIR
-        $(error EFIDIR is not specified)
-    endif
-endif
+EFIDIR ?= ../limine-efi
 
 include ../config.mk
 
-.PHONY: all clean
+.PHONY: clean
 
 # SOURCES
 ASMSRC = $(shell find src -type f -regex "src\/[^.]*?.asm")
@@ -90,6 +85,12 @@ endif
 # FLAGS ( uefi32 )
 ifeq ($(TARGET), amd64-uefi32)
     DEFINES += -D __UEFI32 -D __TARTARUS_NO_PTR
+endif
+
+# PREREQ ( uefi )
+ifneq (, $(filter $(TARGET), amd64-uefi32 amd64-uefi64))
+$(EFIDIR):
+    $(GIT) clone https://github.com/limine-bootloader/limine-efi.git $@ --depth=1
 endif
 
 # BUILD amd64-bios

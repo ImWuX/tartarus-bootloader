@@ -139,12 +139,6 @@ if [ -n "$1" ]; then
                 make -C core clean TARGET="$TARGET"
                 ;;
             amd64-uefi64)
-                # Clone limine-efi if needed
-                if [ ! -d "limine-efi" ]; then
-                    log_important "Cloning limine EFI"
-                    git clone https://github.com/limine-bootloader/limine-efi.git limine-efi --depth=1
-                fi
-
                 # Build the core
                 log_important "Building core"
                 make -C core tartarus.efi TARGET="$TARGET" EFIDIR="$(realpath limine-efi)"
