@@ -1,5 +1,6 @@
 #include "tartarus.h"
 #include <log.h>
+#include <memory/pmm.h>
 #include <memory/heap.h>
 #include <core.h>
 #ifdef __UEFI
@@ -7,7 +8,7 @@
 #endif
 
 #ifdef __BIOS
-extern void *protocol_tartarus_bios_handoff(uint64_t entry, uint32_t boot_info);
+extern void *protocol_tartarus_bios_handoff(uint64_t entry, void *stack, uint32_t boot_info);
 #endif
 #ifdef __UEFI64
 extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
@@ -66,7 +67,8 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     boot_info->cpus = BIT32_CAST(uint64_t) BIT32_CAST(uintptr_t) cpu_array;
 
 #if defined __BIOS
-    protocol_tartarus_bios_handoff(kernel_image->entry, (uint32_t) boot_info);
+    void *stack = pmm_alloc(PMM_AREA_MAX, 16) + 16 * PAGE_SIZE;
+    protocol_tartarus_bios_handoff(kernel_image->entry, stack, (uint32_t) boot_info);
 #elif defined __UEFI
     UINTN umap_size = 0;
     EFI_MEMORY_DESCRIPTOR *umap = NULL;

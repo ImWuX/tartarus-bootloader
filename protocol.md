@@ -15,6 +15,9 @@ The general idea is to leave the CPU in the simplest state possible for the kern
     - `CR4.PAE` SET
     - `EFER.LMA` SET
 
+AP's are guaranteed stacks of at least 16Kb
+SMP is guaranteed a stack of 64Kb
+
 ## Boot Info
 The bootloader prepares a structure that will be passed to the kernel as the one and only argument to the entrypoint. This structure is defined in the `tartarus.h` header file.
 

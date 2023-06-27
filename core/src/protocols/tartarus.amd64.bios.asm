@@ -7,6 +7,8 @@ protocol_tartarus_bios_handoff:
     mov eax, dword [esp + 8]
     mov dword [kernel_entry + 4], eax
     mov eax, dword [esp + 12]
+    mov dword [stack], eax
+    mov eax, dword [esp + 16]
     mov dword [boot_info], eax
 
     mov eax, cr4
@@ -33,6 +35,9 @@ entry_long:
     mov fs, rax
     mov gs, rax
 
+    xor rsp, rsp
+    mov esp, dword [stack]
+
     cld
 
     xor rdi, rdi
@@ -42,4 +47,5 @@ entry_long:
     jmp qword [kernel_entry]
 
 boot_info: dd 0
+stack: dd 0
 kernel_entry: dq 0
