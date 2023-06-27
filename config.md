@@ -19,10 +19,11 @@ Tartarus will search every FAT12/16/32 partition of every disk at the following 
 - `/tartarus/config.cfg`
 
 ## Options
-|Key|Value|
-|-|-|
-|KERNEL|PATH|
-|PROTOCOL|`tartarus`|
+|Key|Value|Required|Description|
+|-|-|-|-|
+|KERNEL|PATH|Yes|The path of the kernel file. Currently this path is relative to the disk the config is found on.|
+|PROTOCOL|`tartarus`|Yes|Which boot protocol tartarus should use to boot the kernel.|
+|TRTRS_PHYS_BOOT_INFO|BOOL|No|(TARTARUS PROTOCOL ONLY) This option controls whether the `boot_info` struct will be in the HHDM or physical memory. Default: `false`|
 
 ### Path
 Paths consist of file/directory names separated by slashes ( `/` ). The names should only contains alphanumeric characters (`a-zA-Z0-9`). Example: `/sys/kernel.elf`

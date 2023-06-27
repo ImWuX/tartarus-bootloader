@@ -2,13 +2,14 @@
 #include <log.h>
 #include <memory/pmm.h>
 #include <memory/heap.h>
+#include <config.h>
 #include <core.h>
 #ifdef __UEFI
 #include <efi.h>
 #endif
 
 #ifdef __BIOS
-extern void *protocol_tartarus_bios_handoff(uint64_t entry, void *stack, uint32_t boot_info);
+extern void *protocol_tartarus_bios_handoff(uint64_t entry, void *stack, uint64_t boot_info);
 #endif
 #ifdef __UEFI64
 extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
@@ -23,6 +24,7 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
 #endif
 
 [[noreturn]] void protocol_tartarus_handoff(
+    uint64_t boot_info_offset,
     elf_loaded_image_t *kernel_image,
     acpi_rsdp_t *rsdp,
     vmm_address_space_t address_space,
@@ -44,7 +46,7 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     for(uint16_t i = 0; i < cpu_count; i++, cpu = cpu->next) {
         if(cpu->is_bsp) bsp_index = i;
         if(cpu->is_bsp) cpu_array[i].wake_on_write = 0;
-        else cpu_array[i].wake_on_write = BIT32_CAST(uint64_t) BIT32_CAST(uintptr_t) cpu->wake_on_write;
+        else cpu_array[i].wake_on_write = BIT64_CAST(uint64_t *) ((uintptr_t) cpu->wake_on_write + boot_info_offset);
         cpu_array[i].apic_id = cpu->apic_id;
     }
 
@@ -52,23 +54,23 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     boot_info->kernel_paddr = kernel_image->paddr;
     boot_info->kernel_vaddr = kernel_image->vaddr;
     boot_info->kernel_size = kernel_image->size;
-    boot_info->acpi_rsdp = BIT32_CAST(uint64_t) BIT32_CAST(uintptr_t) rsdp;
-    boot_info->framebuffer.address = BIT64_CAST(void *) framebuffer->address;
+    boot_info->acpi_rsdp = BIT64_CAST(acpi_rsdp_t *) ((uintptr_t) rsdp + boot_info_offset);
+    boot_info->framebuffer.address = BIT64_CAST(void *) ((uintptr_t) framebuffer->address + boot_info_offset);
     boot_info->framebuffer.size = framebuffer->size;
     boot_info->framebuffer.width = framebuffer->width;
     boot_info->framebuffer.height = framebuffer->height;
     boot_info->framebuffer.pitch = framebuffer->pitch;
-    boot_info->memory_map = BIT32_CAST(uint64_t) BIT32_CAST(uintptr_t) map;
+    boot_info->memory_map = BIT64_CAST(tartarus_mmap_entry_t *) ((uintptr_t) map + boot_info_offset);
     boot_info->memory_map_size = map_size;
     boot_info->hhdm_base = hhdm_base;
     boot_info->hhdm_size = hhdm_size;
     boot_info->bsp_index = bsp_index;
     boot_info->cpu_count = cpu_count;
-    boot_info->cpus = BIT32_CAST(uint64_t) BIT32_CAST(uintptr_t) cpu_array;
+    boot_info->cpus = BIT64_CAST(tartarus_cpu_t *) ((uintptr_t) cpu_array + boot_info_offset);
 
 #if defined __BIOS
     void *stack = pmm_alloc(PMM_AREA_MAX, 16) + 16 * PAGE_SIZE;
-    protocol_tartarus_bios_handoff(kernel_image->entry, stack, (uint32_t) boot_info);
+    protocol_tartarus_bios_handoff(kernel_image->entry, stack, (uintptr_t) boot_info + boot_info_offset);
 #elif defined __UEFI
     UINTN umap_size = 0;
     EFI_MEMORY_DESCRIPTOR *umap = NULL;
@@ -83,7 +85,7 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     }
     g_st->BootServices->ExitBootServices(g_imagehandle, map_key);
 
-    protocol_tartarus_uefi_handoff(kernel_image->entry, (uint64_t) boot_info);
+    protocol_tartarus_uefi_handoff(kernel_image->entry, (uint64_t) boot_info + boot_info_offset);
 #else
 #error Invalid target or missing implementation
 #endif

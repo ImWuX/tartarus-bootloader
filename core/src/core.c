@@ -125,6 +125,6 @@ extern SYMBOL __tartarus_end;
 
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
-    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, cpus);
+    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(config_get_bool(cfg, "TRTRS_PHYS_BOOT_INFO", false) ? 0 : HHDM_OFFSET, kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, cpus);
     log_panic("CORE", "Invalid protocol %s\n", protocol);
 }

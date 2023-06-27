@@ -10,6 +10,8 @@ protocol_tartarus_bios_handoff:
     mov dword [stack], eax
     mov eax, dword [esp + 16]
     mov dword [boot_info], eax
+    mov eax, dword [esp + 20]
+    mov dword [boot_info + 4], eax
 
     mov eax, cr4
     or eax, 1 << 5                              ; Enable PAE bit
@@ -40,12 +42,11 @@ entry_long:
 
     cld
 
-    xor rdi, rdi
-    mov edi, dword [boot_info]                  ; Boot info
+    mov rdi, qword [boot_info]                  ; Boot info
     push qword 0                                ; Push an invalid return address
     xor rbp, rbp                                ; Invalid stack frame
     jmp qword [kernel_entry]
 
-boot_info: dd 0
+boot_info: dq 0
 stack: dd 0
 kernel_entry: dq 0

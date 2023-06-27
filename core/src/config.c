@@ -127,8 +127,22 @@ bool config_get_string_ext(fat_file_t *cfg, const char *key, char **out) {
 
 }
 
-char *config_get_string(fat_file_t *cfg, const char *key, char * fallback) {
+char *config_get_string(fat_file_t *cfg, const char *key, char *fallback) {
     char *value;
     if(config_get_string_ext(cfg, key, &value)) return fallback;
+    return value;
+}
+
+bool config_get_bool_ext(fat_file_t *cfg, const char *key, bool *out) {
+    char *str;
+    if(config_get_string_ext(cfg, key, &str)) return true;
+    *out = strcmp(str, "true") == 0;
+    heap_free(str);
+    return false;
+}
+
+bool config_get_bool(fat_file_t *cfg, const char *key, bool fallback) {
+    bool value;
+    if(config_get_bool_ext(cfg, key, &value)) return fallback;
     return value;
 }

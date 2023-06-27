@@ -9,6 +9,7 @@
 #include <elf.h>
 
 [[noreturn]] void protocol_tartarus_handoff(
+    uint64_t boot_info_offset,
     elf_loaded_image_t *kernel,
     acpi_rsdp_t *rsdp,
     vmm_address_space_t address_space,

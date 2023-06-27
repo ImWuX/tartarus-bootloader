@@ -20,6 +20,7 @@ SMP is guaranteed a stack of 64Kb
 
 ## Boot Info
 The bootloader prepares a structure that will be passed to the kernel as the one and only argument to the entrypoint. This structure is defined in the `tartarus.h` header file.
+Note that by default the boot_info structure along with all the pointers within are in the HHDM.
 
 ### AMD64
 On amd64 the System V ABI is assumed. The only implication relevant to the kernel is that tartarus will pass `boot_info` through the `rdi` register as defined by the SysV calling convention. If the target kernel uses another ABI, an assembly stub is needed to retrieve boot info.
