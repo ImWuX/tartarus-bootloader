@@ -78,9 +78,9 @@ smp_cpu_t *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, v
     ap_info->gdtr_base = (uint32_t) g_gdtr.base;
     ap_info->set_nx = g_nx;
 
-    uint32_t count = 0;
+    uint32_t count = sizeof(madt_t);
     while(count < madt->sdt_header.length) {
-        madt_record_t *record = (madt_record_t *) ((uintptr_t) madt + sizeof(madt_t) + count);
+        madt_record_t *record = (madt_record_t *) ((uintptr_t) madt + count);
         switch(record->type) {
             case MADT_LAPIC:
                 madt_record_lapic_t *lapic_record = (madt_record_lapic_t *) record;

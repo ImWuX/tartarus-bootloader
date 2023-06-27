@@ -69,6 +69,7 @@ extern SYMBOL __tartarus_end;
     fb_t initial_fb;
     if(fb_aquire(1920, 1080, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");
     log_set_fb(&initial_fb);
+    log("Tartarus Core\n");
     pmm_initialize();
 #ifdef __AMD64
 #ifdef __BIOS
