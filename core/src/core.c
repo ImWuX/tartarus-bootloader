@@ -105,14 +105,6 @@ extern SYMBOL __tartarus_end;
     vmm_address_space_t address_space = vmm_initialize();
     uint64_t hhdm_size = hhdm_map(address_space, HHDM_OFFSET);
 
-    smp_cpu_t *cpus;
-#ifdef __AMD64
-    if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
-    acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
-    if(!madt) log_panic("CORE", "No MADT table present");
-    cpus = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, address_space);
-#endif
-
     char *kernel_name;
     if(config_get_string_ext(cfg, "KERNEL", &kernel_name)) log_panic("CORE", "No kernel file specified");
     fat_file_t *kernel = (fat_file_t *) path_resolve(kernel_name, cfg->info, (void *(*)(void *fs, const char *name)) fat_root_lookup, (void *(*)(void *fs, const char *name)) fat_dir_lookup);
@@ -122,6 +114,14 @@ extern SYMBOL __tartarus_end;
     if(!kernel_image) log_panic("CORE", "Failed to load kernel\n");
     if(!kernel_image->entry) log_panic("CORE", "Kernel has no entry point\n");
     log("Kernel Loaded\n");
+
+    smp_cpu_t *cpus;
+#ifdef __AMD64
+    if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
+    acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
+    if(!madt) log_panic("CORE", "No MADT table present");
+    cpus = smp_initialize_aps(madt, (uintptr_t) smp_rsv_page, address_space);
+#endif
 
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
