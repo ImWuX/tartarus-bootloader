@@ -1,7 +1,7 @@
 #!/bin/bash
 
-BINUTILS_VERSION="2.40"
-GCC_VERSION="13.1.0"
+BINUTILS_VERSION="2.41"
+GCC_VERSION="13.2.0"
 
 export TARGET="x86_64-elf"
 export PREFIX="/usr/local/x86_64elfgcc"
