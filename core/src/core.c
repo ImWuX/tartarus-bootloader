@@ -69,7 +69,7 @@ extern SYMBOL __tartarus_end;
     fb_t initial_fb;
     if(fb_aquire(1920, 1080, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");
     log_set_fb(&initial_fb);
-    log("Tartarus Core\n");
+    log("Tartarus Core Enter\n");
     pmm_initialize();
 #ifdef __AMD64
 #ifdef __BIOS
@@ -80,6 +80,7 @@ extern SYMBOL __tartarus_end;
     if((uintptr_t) smp_rsv_page >= 0x100000) log_panic("CORE", "Unable to reserve a page for SMP");
 #endif
     disk_initialize();
+    log("Initialized Disk System\n");
 
     fat_file_t *cfg;
     disk_t *disk = g_disks;
@@ -98,17 +99,20 @@ extern SYMBOL __tartarus_end;
         disk = disk->next;
     }
     if(!cfg) log_panic("CORE", "Could not locate a config file");
+    log("Located The Config\n");
 
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
     vmm_address_space_t address_space = vmm_initialize();
     uint64_t hhdm_size = hhdm_map(address_space, HHDM_OFFSET);
+    log("Virtual Memory Initialized\n");
 
     char *kernel_name;
     if(config_get_string_ext(cfg, "KERNEL", &kernel_name)) log_panic("CORE", "No kernel file specified");
     fat_file_t *kernel = (fat_file_t *) path_resolve(kernel_name, cfg->info, (void *(*)(void *fs, const char *name)) fat_root_lookup, (void *(*)(void *fs, const char *name)) fat_dir_lookup);
     if(!kernel) log_panic("CORE", "Could not find the kernel (%s)\n", kernel_name);
+    log("Kernel Found\n");
 
     elf_loaded_image_t *kernel_image = elf_load(kernel, address_space);
     if(!kernel_image) log_panic("CORE", "Failed to load kernel\n");
@@ -125,6 +129,7 @@ extern SYMBOL __tartarus_end;
 
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
+    log("Tartarus Core Exit\n");
     if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(config_get_bool(cfg, "TRTRS_PHYS_BOOT_INFO", false) ? 0 : HHDM_OFFSET, kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, cpus);
     log_panic("CORE", "Invalid protocol %s\n", protocol);
 }
