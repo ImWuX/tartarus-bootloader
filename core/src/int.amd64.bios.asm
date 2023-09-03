@@ -30,7 +30,7 @@ bits 16
     mov ss, ax
 
     mov eax, cr0
-    and al, 0xFE                                ; Disable protected mode
+    and al, ~1                                  ; Disable protected mode
     mov cr0, eax
 
     jmp 0:.zeroseg                              ; Jump to null segment
