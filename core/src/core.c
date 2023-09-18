@@ -15,6 +15,7 @@
 #include <elf.h>
 #include <config.h>
 #include <smp.h>
+#include <module.h>
 #include <protocols/tartarus.h>
 #ifdef __AMD64
 #include <cpuid.h>
@@ -119,6 +120,33 @@ extern SYMBOL __tartarus_end;
     if(!kernel_image->entry) log_panic("CORE", "Kernel has no entry point\n");
     log("Kernel Loaded\n");
 
+    module_t *modules = 0;
+    char *filename;
+    for(int i = 0; !config_get_string_exto(cfg, "MODULE", &filename, i); i++) {
+        fat_file_t *file = (fat_file_t *) path_resolve(filename, cfg->info, (void *(*)(void *fs, const char *name)) fat_root_lookup, (void *(*)(void *fs, const char *name)) fat_dir_lookup);
+        if(!file) {
+            log_warning("CORE", "Module (%s) could not be found, ignoring.\n", filename);
+            heap_free(filename);
+            continue;
+        }
+        size_t pg_size = (file->size + PAGE_SIZE - 1) / PAGE_SIZE;
+        void *dest = pmm_alloc(PMM_AREA_MAX, pg_size);
+        uint64_t c = fat_read(file, 0, file->size, dest);
+        if(c < file->size) {
+            log_warning("CORE", "Module (%s) could not be fully read, ignoring.\n", filename);
+            pmm_free(dest, pg_size);
+            heap_free(filename);
+            continue;
+        }
+
+        module_t *module = heap_alloc(sizeof(module_t));
+        module->name = filename;
+        module->base = (uintptr_t) dest;
+        module->size = file->size;
+        module->next = modules;
+        modules = module;
+    }
+
     smp_cpu_t *cpus;
 #ifdef __AMD64
     if(!lapic_supported()) log_panic("CORE", "Local APIC not supported");
@@ -130,6 +158,6 @@ extern SYMBOL __tartarus_end;
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
     log("Tartarus Core Exit\n");
-    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(config_get_bool(cfg, "TRTRS_PHYS_BOOT_INFO", false) ? 0 : HHDM_OFFSET, kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, cpus);
+    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(config_get_bool(cfg, "TRTRS_PHYS_BOOT_INFO", false) ? 0 : HHDM_OFFSET, kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, modules, cpus);
     log_panic("CORE", "Invalid protocol %s\n", protocol);
 }

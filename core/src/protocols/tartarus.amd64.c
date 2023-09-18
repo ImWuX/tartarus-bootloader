@@ -33,6 +33,7 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     uint16_t map_size,
     uint64_t hhdm_base,
     uint64_t hhdm_size,
+    module_t *modules,
     smp_cpu_t *cpus
 ) {
     asm volatile("mov %0, %%cr3" : : "r" (address_space));
@@ -48,6 +49,17 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
         if(cpu->is_bsp) cpu_array[i].wake_on_write = 0;
         else cpu_array[i].wake_on_write = BIT64_CAST(uint64_t *) ((uintptr_t) cpu->wake_on_write + boot_info_offset);
         cpu_array[i].apic_id = cpu->apic_id;
+    }
+
+    uint16_t module_count = 0;
+    for(module_t *module = modules; module; module = module->next) module_count++;
+
+    tartarus_module_t *module_array = heap_alloc(sizeof(tartarus_module_t) * module_count);
+    module_t *module = modules;
+    for(uint16_t i = 0; i < module_count; i++, module = module->next) {
+        module_array[i].name = BIT64_CAST(char *) ((uintptr_t) module->name + boot_info_offset);
+        module_array[i].paddr = module->base + boot_info_offset;
+        module_array[i].size = module->size;
     }
 
     tartarus_boot_info_t *boot_info = heap_alloc(sizeof(tartarus_boot_info_t));
@@ -67,6 +79,8 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     boot_info->bsp_index = bsp_index;
     boot_info->cpu_count = cpu_count;
     boot_info->cpus = BIT64_CAST(tartarus_cpu_t *) ((uintptr_t) cpu_array + boot_info_offset);
+    boot_info->module_count = module_count;
+    boot_info->modules = BIT64_CAST(tartarus_module_t *) ((uintptr_t) module_array + boot_info_offset);
 
 #if defined __BIOS
     void *stack = pmm_alloc(PMM_AREA_MAX, 16) + 16 * PAGE_SIZE;

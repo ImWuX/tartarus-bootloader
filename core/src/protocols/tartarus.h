@@ -5,6 +5,7 @@
 #include <memory/vmm.h>
 #include <drivers/acpi.h>
 #include <graphics/fb.h>
+#include <module.h>
 #include <smp.h>
 #include <elf.h>
 
@@ -18,6 +19,7 @@
     uint16_t map_size,
     uint64_t hhdm_base,
     uint64_t hhdm_size,
+    module_t *modules,
     smp_cpu_t *cpus
 );
 

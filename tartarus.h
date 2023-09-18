@@ -52,6 +52,12 @@ __TARTARUS_PTR(uint64_t *) wake_on_write;
 #endif
 
 typedef struct {
+    __TARTARUS_PTR(char *) name;
+    uint64_t paddr;
+    uint64_t size;
+} __TARTARUS_PACKED tartarus_module_t;
+
+typedef struct {
     uint64_t kernel_vaddr;
     uint64_t kernel_paddr;
     uint64_t kernel_size;
@@ -64,6 +70,8 @@ typedef struct {
     uint8_t bsp_index;
     uint8_t cpu_count;
     __TARTARUS_PTR(tartarus_cpu_t *) cpus;
+    uint16_t module_count;
+    __TARTARUS_PTR(tartarus_module_t *) modules;
 } __TARTARUS_PACKED tartarus_boot_info_t;
 
 #endif

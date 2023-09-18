@@ -92,7 +92,7 @@ smp_cpu_t *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, v
                     cpu->is_bsp = true;
                     goto success;
                 }
-                uint64_t *wow =  (uint64_t *) ((uintptr_t) wow_page + lapic_record->lapic_id * 16);
+                uint64_t *wow = (uint64_t *) ((uintptr_t) wow_page + lapic_record->lapic_id * 16);
                 cpu->wake_on_write = wow;
                 ap_info->init = 0;
                 ap_info->apic_id = lapic_record->lapic_id;

@@ -7,9 +7,10 @@
 #define CONFIG2_DIR "TARTARUS   "
 #define CONFIG2_FILE "CONFIG  CFG"
 
-static bool find_value(char *config_data, uint32_t config_data_size, const char *key, uint32_t *offset) {
+static bool find_value(char *config_data, uint32_t config_data_size, const char *key, uint32_t *offset, int occurance) {
     bool match = true;
     bool key_end = false;
+    int found_count = 0;
     uint32_t local_offset = 0;
     for(uint32_t i = 0; i < config_data_size; i++) {
         switch(config_data[i]) {
@@ -19,6 +20,8 @@ static bool find_value(char *config_data, uint32_t config_data_size, const char 
                 break;
             case '=':
                 if(!match || !key_end) break;
+                found_count++;
+                if(found_count <= occurance) break;
                 *offset = i + 1;
                 return false;
             case '\n':
@@ -63,7 +66,7 @@ bool config_get_int_ext(fat_file_t *cfg, const char *key, int *out) {
     char *config_data = heap_alloc(cfg->size);
     if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) log_panic("CONFIG", "Failed to read config\n");
     uint32_t value_offset;
-    if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fail;
+    if(find_value(config_data, cfg->size, key, &value_offset, 0)) goto ret_fail;
     int value = 0;
     bool strip = true;
     bool negative = false;
@@ -99,11 +102,11 @@ int config_get_int(fat_file_t *cfg, const char *key, int fallback) {
     return value;
 }
 
-bool config_get_string_ext(fat_file_t *cfg, const char *key, char **out) {
+bool config_get_string_exto(fat_file_t *cfg, const char *key, char **out, int occurance) {
     char *config_data = heap_alloc(cfg->size);
     if(fat_read(cfg, 0, cfg->size, config_data) != cfg->size) log_panic("CONFIG", "Failed to read config\n");
     uint32_t value_offset;
-    if(find_value(config_data, cfg->size, key, &value_offset)) goto ret_fail;
+    if(find_value(config_data, cfg->size, key, &value_offset, occurance)) goto ret_fail;
     int str_length = 0;
     bool strip = true;
     for(uint32_t i = value_offset; i < cfg->size; i++) {
@@ -124,7 +127,10 @@ bool config_get_string_ext(fat_file_t *cfg, const char *key, char **out) {
     ret_fail:
     heap_free(config_data);
     return true;
+}
 
+bool config_get_string_ext(fat_file_t *cfg, const char *key, char **out) {
+    return config_get_string_exto(cfg, key, out, 0);
 }
 
 char *config_get_string(fat_file_t *cfg, const char *key, char *fallback) {
