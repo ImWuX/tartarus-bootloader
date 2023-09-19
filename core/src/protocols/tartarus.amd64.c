@@ -58,7 +58,7 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
     module_t *module = modules;
     for(uint16_t i = 0; i < module_count; i++, module = module->next) {
         module_array[i].name = BIT64_CAST(char *) ((uintptr_t) module->name + boot_info_offset);
-        module_array[i].paddr = module->base + boot_info_offset;
+        module_array[i].paddr = module->base;
         module_array[i].size = module->size;
     }
 
