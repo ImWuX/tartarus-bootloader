@@ -107,10 +107,10 @@ ifeq ($(TARGET), amd64-uefi64)
 tartarus.efi: tartarus.elf
 	$(OBJCPY) -O binary $< $@
 
-$(EFIDIR)/gnuefi/crt0-efi-x86_64.o $(EFIDIR)/gnuefi/reloc_x86_64.o:
-	$(MAKE) -C $(EFIDIR)/gnuefi
+$(EFIDIR)/gnuefi/crt0-efi-x86_64.S.o $(EFIDIR)/gnuefi/reloc_x86_64.c.o: $(EFIDIR)
+	$(MAKE) ARCH=x86_64 -C $(EFIDIR)/gnuefi
 
-tartarus.elf: $(EFIDIR)/gnuefi/crt0-efi-x86_64.o $(EFIDIR)/gnuefi/reloc_x86_64.o $(CSRC:.c=.o) $(ASMSRC:.asm=.o) $(AMD64_LIBGCC)
+tartarus.elf: $(EFIDIR)/gnuefi/crt0-efi-x86_64.S.o $(EFIDIR)/gnuefi/reloc_x86_64.c.o $(CSRC:.c=.o) $(ASMSRC:.asm=.o) $(AMD64_LIBGCC)
 	$(LD) $(LDFLAGS) -T"$(EFIDIR)/gnuefi/elf_x86_64_efi.lds" -o $@ $^
 endif
 
