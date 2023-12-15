@@ -6,6 +6,7 @@
 #include <memory/heap.h>
 #if defined __BIOS && defined __AMD64
 #include <int.h>
+#include <drivers/tsc.h>
 #endif
 
 disk_t *g_disks;
@@ -150,6 +151,52 @@ static uint16_t estimate_sector_size(uint8_t disk_id, uint8_t test_val) {
     return size + 1;
 }
 
+static uint16_t estimate_optimal_transfer_size(disk_t *disk) {
+    uint8_t *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, 32);
+    memset(buf, 0, PAGE_SIZE * 32);
+
+    static const size_t transfer_sizes[] = { 1, 2, 4, 8, 16, 24, 32, 48, 64 };
+
+    uint64_t fastest_transfer = UINT64_MAX;
+    size_t fastest_size = transfer_sizes[0];
+    for(size_t i = 0; i < sizeof(transfer_sizes) / sizeof(size_t); i++) {
+        if(transfer_sizes[i] * disk->sector_size > PAGE_SIZE * 32) break;
+
+        disk_address_packet_t dap = {
+            .size = sizeof(disk_address_packet_t),
+            .sector_count = transfer_sizes[i],
+            .memory_segment = int_16bit_segment(buf),
+            .memory_offset = int_16bit_offset(buf),
+            .disk_lba = 0
+        };
+
+        uint64_t start_time = tsc_read();
+        for(size_t j = 0; j < (PAGE_SIZE * 32) / disk->sector_size; j += transfer_sizes[i]) {
+            int_regs_t regs = {
+                .eax = (0x42 << 8),
+                .edx = disk->id,
+                .ds = int_16bit_segment(&dap),
+                .esi = int_16bit_offset(&dap)
+            };
+            int_exec(0x13, &regs);
+            if(regs.eflags & EFLAGS_CF) {
+                pmm_free(buf, 32);
+                return fastest_size;
+            }
+            dap.disk_lba += transfer_sizes[i];
+        }
+        uint64_t transfer_time = tsc_read() - start_time;
+
+        if(transfer_time < fastest_transfer) {
+            fastest_transfer = transfer_time;
+            fastest_size = transfer_sizes[i];
+        }
+    }
+
+    pmm_free(buf, 32);
+    return fastest_size;
+}
+
 void disk_initialize() {
     for(int i = 0x80; i < 0xFF; i++) {
         ext_read_drive_params_t params = { .size = sizeof(ext_read_drive_params_t) };
@@ -170,6 +217,7 @@ void disk_initialize() {
         disk->id = i;
         disk->sector_size = calculated_sector_size != 0 ? calculated_sector_size : params.sector_size;
         disk->sector_count = params.abs_sectors;
+        disk->optimal_transfer_size = 1;
 
         int buf_size = (disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
         void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
@@ -180,6 +228,7 @@ void disk_initialize() {
         disk->writable = !disk_write_sector(disk, 0, buf_size, buf);
         disk->partitions = 0;
         initialize_partitions(disk);
+        disk->optimal_transfer_size = estimate_optimal_transfer_size(disk);
         disk->next = g_disks;
         g_disks = disk;
 
@@ -189,24 +238,30 @@ void disk_initialize() {
 
 bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *dest) {
     disk_address_packet_t dap = {
-        .size = sizeof(disk_address_packet_t),
-        .sector_count = 1,
+        .size = sizeof(disk_address_packet_t)
     };
     int_regs_t regs = {
         .edx = disk->id,
         .ds = int_16bit_segment(&dap),
         .esi = int_16bit_offset(&dap)
     };
-    for(uint16_t i = 0; i < sector_count; i++) {
+    size_t buf_size = (disk->optimal_transfer_size * disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
+    for(uint16_t i = 0; i < sector_count; i += disk->optimal_transfer_size) {
         dap.disk_lba = lba;
-        dap.memory_segment = int_16bit_segment(dest);
-        dap.memory_offset = int_16bit_offset(dest);
+        dap.sector_count = sector_count - i;
+        if(dap.sector_count > disk->optimal_transfer_size) dap.sector_count = disk->optimal_transfer_size;
+        dap.memory_segment = int_16bit_segment(buf);
+        dap.memory_offset = int_16bit_offset(buf);
         regs.eax = (0x42 << 8);
         int_exec(0x13, &regs);
         if(regs.eflags & EFLAGS_CF) return true;
-        lba++;
-        dest += disk->sector_size;
+        lba += disk->optimal_transfer_size;
+
+        memcpy(dest, buf, dap.sector_count * disk->sector_size);
+        dest += disk->sector_size * disk->optimal_transfer_size;
     }
+    pmm_free(buf, buf_size);
     return false;
 }
 
@@ -282,7 +337,7 @@ void disk_read(disk_part_t *part, uint64_t offset, uint64_t count, void *dest) {
     uint64_t sect_count = (sect_offset + count + part->disk->sector_size - 1) / part->disk->sector_size;
 
     uint64_t buf_size = (part->disk->sector_size * sect_count + PAGE_SIZE - 1) / PAGE_SIZE;
-    void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
+    void *buf = pmm_alloc(PMM_AREA_MAX, buf_size);
 
     if(disk_read_sector(part->disk, part->lba + lba_offset, sect_count, buf)) log_panic("DISK", "Read failed");
     memcpy(dest, (void *) (buf + sect_offset), count);

@@ -12,6 +12,8 @@ typedef enum {
 
 typedef struct {
     disk_part_t *partition;
+    void *cache;
+    uint64_t cache_lba;
     fat_type_t type;
     uint16_t reserved_sectors;
     uint8_t fat_count;

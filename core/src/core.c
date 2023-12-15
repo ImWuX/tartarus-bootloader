@@ -68,7 +68,7 @@ extern SYMBOL __tartarus_end;
     else log_warning("CORE", "CPU does not support EFER.NXE\n");
 #endif
     fb_t initial_fb;
-    if(fb_aquire(1920, 1080, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");
+    if(fb_aquire(600, 800, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");
     log_set_fb(&initial_fb);
     log("Tartarus Core Enter\n");
     pmm_initialize();
@@ -129,6 +129,7 @@ extern SYMBOL __tartarus_end;
             heap_free(filename);
             continue;
         }
+        log("Loading module %s\n", filename);
         size_t pg_size = (file->size + PAGE_SIZE - 1) / PAGE_SIZE;
         void *dest = pmm_alloc(PMM_AREA_MAX, pg_size);
         uint64_t c = fat_read(file, 0, file->size, dest);

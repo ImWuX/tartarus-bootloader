@@ -86,22 +86,36 @@ typedef struct {
 } __attribute__((packed)) directory_entry_t;
 
 inline static uint32_t next_cluster(fat_info_t *info, uint32_t cluster) {
-    uint32_t next_cluster = 0;
+    uint64_t cluster_addr = 0;
     switch(info->type) {
-        case FAT12:
+        case FAT12: // FAT12 is cursed, wont optimize it cuz clusters can be across sector boundaries...
+            uint32_t next_cluster = 0;
             disk_read(info->partition, FAT_OFFSET(info) + (cluster + cluster / 2), sizeof(uint16_t), &next_cluster);
             if(cluster % 2 != 0) next_cluster >>= 4;
             next_cluster &= 0xFFF;
-            break;
+            return next_cluster;
         case FAT16:
-            disk_read(info->partition, FAT_OFFSET(info) + cluster * sizeof(uint16_t), sizeof(uint16_t), &next_cluster);
+            cluster_addr = FAT_OFFSET(info) + cluster * sizeof(uint16_t);
             break;
         case FAT32:
-            disk_read(info->partition, FAT_OFFSET(info) + cluster * sizeof(uint32_t), sizeof(uint32_t), &next_cluster);
-            next_cluster &= 0xFFFFFFF;
+            cluster_addr = FAT_OFFSET(info) + cluster * sizeof(uint32_t);
             break;
     }
-    return next_cluster;
+    uint64_t lba = cluster_addr / info->partition->disk->sector_size;
+    uint64_t offset = cluster_addr % info->partition->disk->sector_size;
+    if(info->cache_lba != lba) {
+        info->cache_lba = lba;
+        if(disk_read_sector(info->partition->disk, info->partition->lba + lba, 1, info->cache)) log_panic("FAT", "Failed to read sector from disk");
+    }
+    switch(info->type) {
+        case FAT12:
+            __builtin_unreachable();
+        case FAT16:
+            return *(uint16_t *) (uintptr_t) ((uintptr_t) info->cache + offset);
+        case FAT32:
+            return (*(uint32_t *) (uintptr_t) ((uintptr_t) info->cache + offset)) & 0x0FFF'FFFF;
+    }
+    __builtin_unreachable();
 }
 
 inline static fat_file_t *create_file(fat_info_t *info, directory_entry_t *entry) {
@@ -183,6 +197,8 @@ fat_info_t *fat_initialize(disk_part_t *partition) {
 
     fat_info_t *info = heap_alloc(sizeof(fat_info_t));
     info->partition = partition;
+    info->cache = heap_alloc(partition->disk->sector_size);
+    info->cache_lba = 0;
     info->type = type;
     info->reserved_sectors = bpb->reserved_sector_count;
     info->fat_count = bpb->fat_count;
@@ -246,13 +262,20 @@ uint64_t fat_read(fat_file_t *file, uint64_t offset, uint64_t count, void *dest)
     offset %= file->info->cluster_size;
 
     while(!IS_END(cluster, file->info->type) && count > 0) {
-        if(IS_BAD(cluster, file->info->type)) log_panic("FAT", "Bad cluster");
-        uint64_t lcount = count < file->info->cluster_size ? count : file->info->cluster_size;
-        disk_read(file->info->partition, DATA_OFFSET(file->info) + (cluster - 2) * file->info->cluster_size + offset, lcount, dest);
-        count -= lcount;
-        dest += lcount;
+        uint32_t streak_start = cluster;
+        size_t streak_count = 0;
+        while(cluster == streak_start + streak_count && !IS_END(cluster, file->info->type)) {
+            // TODO: this can be optimized to not look for fot streaks longer than needed
+            if(IS_BAD(cluster, file->info->type)) log_panic("FAT", "Bad cluster");
+            streak_count++;
+            cluster = next_cluster(file->info, cluster);
+        }
+        uint64_t actual_read_count = streak_count * file->info->cluster_size - offset;
+        if(actual_read_count > count) actual_read_count = count;
+        disk_read(file->info->partition, DATA_OFFSET(file->info) + (streak_start - 2) * file->info->cluster_size + offset, actual_read_count, dest);
+        count -= actual_read_count;
+        dest += actual_read_count;
         offset = 0;
-        cluster = next_cluster(file->info, cluster);
     }
 
     return initial_count - count;
