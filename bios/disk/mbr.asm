@@ -126,7 +126,7 @@ reset_seg:
     jmp error.part_not_found
 .found:
     mov edi, dword [ebx + 0x24]                             ; Upper 32 bits of LBA
-    cmp edi, dword [ebx + 0x3C]                             ; Upper 32 bits of end LBA
+    cmp edi, dword [ebx + 0x2C]                             ; Upper 32 bits of end LBA
     jne error.core_too_large
 
     xor edx, edx
