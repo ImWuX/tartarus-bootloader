@@ -7,7 +7,7 @@
 #include <int.h>
 #endif
 
-#define INSET 100
+#define INSET 25
 #define FG 0xFFFFFFFF
 #define BG 0x00000000
 

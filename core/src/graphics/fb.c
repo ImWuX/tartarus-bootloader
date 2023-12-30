@@ -27,7 +27,7 @@ inline static bool get_mode_info(uint16_t mode, vesa_vbe_mode_info_t *dest) {
     return (regs.eax & 0xFFFF) != 0x4F;
 }
 
-bool fb_aquire(uint32_t target_width, uint32_t target_height, fb_t *out) {
+bool fb_acquire(uint32_t target_width, uint32_t target_height, fb_t *out) {
     vesa_vbe_info_t vbe_info = {};
     ((uint8_t *) &vbe_info)[0] = (uint8_t) 'V';
     ((uint8_t *) &vbe_info)[1] = (uint8_t) 'B';
@@ -85,7 +85,7 @@ bool fb_aquire(uint32_t target_width, uint32_t target_height, fb_t *out) {
     return false;
 }
 #elif defined __UEFI
-bool fb_aquire(uint32_t target_width, uint32_t target_height, fb_t *out) {
+bool fb_acquire(uint32_t target_width, uint32_t target_height, fb_t *out) {
     bool closest_found = false;
     UINTN closest = 0;
     UINT32 closest_difference = UINT32_MAX;

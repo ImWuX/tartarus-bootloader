@@ -68,7 +68,7 @@ extern SYMBOL __tartarus_end;
     else log_warning("CORE", "CPU does not support EFER.NXE\n");
 #endif
     fb_t initial_fb;
-    if(fb_aquire(600, 800, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");
+    if(fb_acquire(600, 800, &initial_fb)) log_panic("CORE", "Failed to aquire the initial framebuffer");
     log_set_fb(&initial_fb);
     log("Tartarus Core Enter\n");
     pmm_initialize();
@@ -101,6 +101,13 @@ extern SYMBOL __tartarus_end;
     }
     if(!cfg) log_panic("CORE", "Could not locate a config file");
     log("Located The Config\n");
+
+    uint32_t scrw = config_get_int(cfg, "SCRW", 1280);
+    uint32_t scrh = config_get_int(cfg, "SCRH", 800);
+    fb_t final_fb;
+    if(fb_acquire(scrw, scrh, &final_fb)) log_panic("CORE", "Failed to acquire final framebuffer");
+    log_set_fb(&final_fb);
+    log("Acquired the final framebuffer\n");
 
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
@@ -159,6 +166,6 @@ extern SYMBOL __tartarus_end;
     char *protocol;
     if(config_get_string_ext(cfg, "PROTOCOL", &protocol)) log_panic("CORE", "No protocol specified");
     log("Tartarus Core Exit\n");
-    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(config_get_bool(cfg, "TRTRS_PHYS_BOOT_INFO", false) ? 0 : HHDM_OFFSET, kernel_image, rsdp, address_space, &initial_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, modules, cpus);
+    if(strcmp(protocol, "TARTARUS") == 0) protocol_tartarus_handoff(config_get_bool(cfg, "TRTRS_PHYS_BOOT_INFO", false) ? 0 : HHDM_OFFSET, kernel_image, rsdp, address_space, &final_fb, g_pmm_map, g_pmm_map_size, HHDM_OFFSET, hhdm_size, modules, cpus);
     log_panic("CORE", "Invalid protocol %s\n", protocol);
 }
