@@ -146,7 +146,7 @@ elf_loaded_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_space
         memset(addr, 0, program_header->memsz);
 
         elf64_addr_t aligned_vaddr = program_header->vaddr - program_header->vaddr % PAGE_SIZE;
-        elf64_xword_t aligned_size = (program_header->memsz + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
+        elf64_xword_t aligned_size = (program_header->memsz + (program_header->vaddr % PAGE_SIZE) + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
         // VMM flags intentionally match the bottom 3 bits of elf flags :)
         vmm_map(address_space, (uint64_t) (uintptr_t) addr, aligned_vaddr, aligned_size, program_header->flags & 0b111);
         if(fat_read(file, program_header->offset, program_header->filesz, addr) != program_header->filesz) {
