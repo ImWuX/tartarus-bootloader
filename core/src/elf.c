@@ -128,7 +128,7 @@ elf_loaded_image_t *elf_load(fat_file_t *file, vmm_address_space_t address_space
         }
         if(program_header->type != PT_LOAD || program_header->memsz == 0) continue;
         if(program_header->vaddr < lowest_vaddr) lowest_vaddr = program_header->vaddr;
-        if(program_header->vaddr + program_header->memsz) highest_vaddr = program_header->vaddr + program_header->memsz;
+        if(program_header->vaddr + program_header->memsz > highest_vaddr) highest_vaddr = program_header->vaddr + program_header->memsz;
     }
 
     elf64_xword_t size = highest_vaddr - lowest_vaddr;

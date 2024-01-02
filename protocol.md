@@ -14,6 +14,7 @@ The general idea is to leave the CPU in the simplest state possible for the kern
     - `CR0.WP` SET
     - `CR4.PAE` SET
     - `EFER.LMA` SET
+    - `EFER.NXE` SET (if available)
 
 AP's are guaranteed stacks of at least 16Kb
 SMP is guaranteed a stack of 64Kb
