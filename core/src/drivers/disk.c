@@ -236,7 +236,7 @@ void disk_initialize() {
     }
 }
 
-bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *dest) {
+bool disk_read_sector(disk_t *disk, uint64_t lba, uint64_t sector_count, void *dest) {
     disk_address_packet_t dap = {
         .size = sizeof(disk_address_packet_t)
     };
@@ -247,10 +247,12 @@ bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *d
     };
     size_t buf_size = (disk->optimal_transfer_size * disk->sector_size + PAGE_SIZE - 1) / PAGE_SIZE;
     void *buf = pmm_alloc(PMM_AREA_CONVENTIONAL, buf_size);
-    for(uint16_t i = 0; i < sector_count; i += disk->optimal_transfer_size) {
+    for(uint64_t i = 0; i < sector_count; i += disk->optimal_transfer_size) {
         dap.disk_lba = lba;
-        dap.sector_count = sector_count - i;
-        if(dap.sector_count > disk->optimal_transfer_size) dap.sector_count = disk->optimal_transfer_size;
+        uint64_t tmp_sec_count = sector_count - i;
+        if(tmp_sec_count > UINT16_MAX) tmp_sec_count = UINT16_MAX;
+        if(tmp_sec_count > disk->optimal_transfer_size) tmp_sec_count = disk->optimal_transfer_size;
+        dap.sector_count = tmp_sec_count;
         dap.memory_segment = int_16bit_segment(buf);
         dap.memory_offset = int_16bit_offset(buf);
         regs.eax = (0x42 << 8);
@@ -320,7 +322,7 @@ void disk_initialize() {
     }
 }
 
-bool disk_read_sector(disk_t *disk, uint64_t lba, uint16_t sector_count, void *dest) {
+bool disk_read_sector(disk_t *disk, uint64_t lba, uint64_t sector_count, void *dest) {
     return EFI_ERROR(disk->io->ReadBlocks(disk->io, disk->io->Media->MediaId, lba, sector_count * disk->sector_size, dest));
 }
 

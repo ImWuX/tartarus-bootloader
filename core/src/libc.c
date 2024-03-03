@@ -15,3 +15,9 @@ int strcmp(const char* lhs, const char* rhs) {
     }
     return 0;
 }
+
+int strlen(const char *str) {
+    size_t i = 0;
+    while(str[i]) ++i;
+    return i;
+}

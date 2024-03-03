@@ -152,8 +152,11 @@ extern SYMBOL __tartarus_end;
         module->base = (uintptr_t) dest;
         module->size = file->size;
         module->next = modules;
+        log("%s, %x, %x\n", module->name, module->base, module->size);
         modules = module;
     }
+    // log("DONE");
+    // for(;;);
 
     smp_cpu_t *cpus;
 #ifdef __AMD64

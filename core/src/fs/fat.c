@@ -128,6 +128,16 @@ inline static fat_file_t *create_file(fat_info_t *info, directory_entry_t *entry
     return file;
 }
 
+static bool fat_name_cmp(directory_entry_t *entry, const char *name) {
+    int name_len = strlen(name);
+    if(name_len > 11) name_len = 11;
+    if(memcmp(entry->name, name, name_len) != 0) return false;
+    for(int i = name_len; i < 11; i++) {
+        if(entry->name[i] != ' ') return false;
+    }
+    return true;
+}
+
 inline static fat_file_t *internal_dir_lookup(fat_info_t *info, uint32_t cluster, const char *name) {
     directory_entry_t *entries = heap_alloc(info->cluster_size);
     while(!IS_END(cluster, info->type)) {
@@ -136,7 +146,7 @@ inline static fat_file_t *internal_dir_lookup(fat_info_t *info, uint32_t cluster
         for(uint16_t i = 0; i < info->cluster_size / sizeof(directory_entry_t); i++) {
             if(IS_DIR_FREE(entries[i].name[0])) continue;
             if(entries[i].attributes == 0xF) continue; // Ignore long names
-            if(memcmp(entries[i].name, name, 11) != 0) continue;
+            if(!fat_name_cmp(&entries[i], name)) continue;
             fat_file_t *file = create_file(info, &entries[i]);
             heap_free(entries);
             return file;
