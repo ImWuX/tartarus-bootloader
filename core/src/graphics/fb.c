@@ -81,7 +81,7 @@ bool fb_acquire(uint32_t target_width, uint32_t target_height, fb_t *out) {
     out->pitch /= mode_info.bpp / 8;
     out->width = mode_info.width;
     out->height = mode_info.height;
-    out->size = out->height * out->pitch;
+    out->size = out->height * out->pitch * (mode_info.bpp / 8);
     return false;
 }
 #elif defined __UEFI
