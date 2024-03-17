@@ -86,7 +86,7 @@ smp_cpu_t *smp_initialize_aps(acpi_sdt_header_t *sdt, uintptr_t reserved_page, v
                 madt_record_lapic_t *lapic_record = (madt_record_lapic_t *) record;
                 smp_cpu_t *cpu = heap_alloc(sizeof(smp_cpu_t));
                 cpu->acpi_id = lapic_record->acpi_processor_id;
-                cpu->apic_id = lapic_record->lapic_id;
+                cpu->lapic_id = lapic_record->lapic_id;
                 cpu->is_bsp = false;
                 if(lapic_record->lapic_id == bsp_id) {
                     cpu->is_bsp = true;

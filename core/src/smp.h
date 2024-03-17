@@ -9,7 +9,7 @@
 typedef struct smp_cpu {
     uint8_t acpi_id;
 #ifdef __AMD64
-    uint8_t apic_id;
+    uint8_t lapic_id;
 #endif
     bool is_bsp;
     uint64_t *wake_on_write;

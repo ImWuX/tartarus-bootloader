@@ -44,7 +44,7 @@ typedef struct {
 
 #ifdef __AMD64
 typedef struct {
-uint8_t apic_id;
+uint8_t lapic_id;
 __TARTARUS_PTR(uint64_t *) wake_on_write;
 } __TARTARUS_PACKED tartarus_cpu_t;
 #else

@@ -48,7 +48,7 @@ extern void *protocol_tartarus_uefi_handoff(uint64_t entry, uint64_t boot_info);
         if(cpu->is_bsp) bsp_index = i;
         if(cpu->is_bsp) cpu_array[i].wake_on_write = 0;
         else cpu_array[i].wake_on_write = BIT64_CAST(uint64_t *) ((uintptr_t) cpu->wake_on_write + boot_info_offset);
-        cpu_array[i].apic_id = cpu->apic_id;
+        cpu_array[i].lapic_id = cpu->lapic_id;
     }
 
     uint16_t module_count = 0;
