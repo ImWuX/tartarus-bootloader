@@ -7,8 +7,8 @@
 
 #ifndef __TARTARUS_ARCH_OVERRIDE
 #if defined __x86_64__ || defined __i386__ || defined _M_X64 || defined _M_IX86
-#ifndef __AMD64
-#define __AMD64
+#ifndef __X86_64
+#define __X86_64
 #endif
 #endif
 #endif

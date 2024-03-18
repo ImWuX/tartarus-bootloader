@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <cpuid.h>
-#include <common/pmm.h>
-#include <common/log.h>
-#include <x86_64/bios/e820.h>
-#include <x86_64/common/msr.h>
+#include <log.h>
+#include <memory/pmm.h>
+#include <sys/msr.x86_64.h>
+#include <sys/e820.x86_64.bios.h>
 
 #define CPUID_NX (1 << 20)
 #define MSR_EFER 0xC0000080
@@ -51,11 +51,17 @@ static void log_sink(char c) {
         pmm_init_add((tartarus_memory_map_entry_t) { .base = e820[i].address, .length = e820[i].length, .type = type });
     }
     pmm_init_sanitize();
-    log("CORE", "Initialized physical memory");
+    log("CORE", "Initialized physical memory (%i memory map entries)", e820_size);
 
     // Protect initial stack
     pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, 0x6000, 0x1000);
     pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, (uintptr_t) __tartarus_start, (uintptr_t) __tartarus_end - (uintptr_t) __tartarus_start);
+
+    // Allocate a page early to get one low enough for smp startup
+    void *smp_rsv_page = pmm_alloc_page(PMM_AREA_CONVENTIONAL);
+    if((uintptr_t) smp_rsv_page >= 0x100000) log_panic("CORE", "Unable to reserve a low page for SMP startup");
+
+    
 
     for(;;);
 }

@@ -9,7 +9,7 @@ all: $(BUILD)/x86_64-bios/mbr.bin $(BUILD)/core/tartarus.sys
 
 $(BUILD)/x86_64-bios/mbr.bin:
 	mkdir -p $(@D)
-	$(MAKE) -C $(SRC)/entry $@
+	$(MAKE) -C $(SRC)/boot $@
 
 $(BUILD)/core/tartarus.sys:
 	mkdir -p $(@D)

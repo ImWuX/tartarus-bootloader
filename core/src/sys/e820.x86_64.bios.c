@@ -1,11 +1,10 @@
-#include "e820.h"
-#include <x86_64/bios/int.h>
+#include "e820.x86_64.bios.h"
+#include <sys/int.x86_64.bios.h>
 
-#define MAGIC_NUMBER ((uint16_t) 0x534D4150)
+#define MAGIC_NUMBER 0x534D4150
 
 int e820_load(void *dest, int max) {
     int count = 0;
-
     int_regs_t regs = { .edi = (uint32_t) dest };
     while(count < max) {
         *((uint32_t *) (uintptr_t) (regs.edi + 20)) = 1;

@@ -2,13 +2,14 @@
 #include <stddef.h>
 #include <tartarus.h>
 
-#ifdef __AMD64
-#define PAGE_SIZE 0x1000
-#define PAGE_SIZE_LARGE 0x200000
+#ifdef __X86_64
+#define PMM_PAGE_SIZE 0x1000
+#define PMM_PAGE_SIZE_LARGE 0x200000
 #else
 #error Invalid target or missing implementation
 #endif
-#define MAX_MEMAP_ENTRIES 512
+
+#define PMM_MAX_MEMAP_ENTRIES 512
 
 typedef enum {
     PMM_AREA_CONVENTIONAL,
@@ -18,7 +19,7 @@ typedef enum {
 } pmm_area_t;
 
 extern uint16_t g_pmm_map_size;
-extern tartarus_memory_map_entry_t g_pmm_map[MAX_MEMAP_ENTRIES];
+extern tartarus_memory_map_entry_t g_pmm_map[PMM_MAX_MEMAP_ENTRIES];
 
 void pmm_init_sanitize();
 void pmm_init_add(tartarus_memory_map_entry_t entry);

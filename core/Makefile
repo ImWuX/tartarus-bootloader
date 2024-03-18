@@ -5,16 +5,16 @@ ifneq (, $(filter $(TARGET), x86_64-bios))
 endif
 
 # Sources
-C_SOURCES := $(shell find src/common -type f -name *.c)
+C_SOURCES := $(shell find src -type f -regex "src\/[^.]*?.c")
 
 ifeq ($(ARCH), x86_64)
-    C_SOURCES += $(shell find src/x86_64/common -type f -name *.c)
-    ASM_SOURCES := $(shell find src/x86_64/common -type f -name *.asm)
+    C_SOURCES += $(shell find src -type f -name *.x86_64.c)
+    ASM_SOURCES := $(shell find src -type f -name *.x86_64.asm)
 endif
 
 ifeq ($(TARGET), x86_64-bios)
-    C_SOURCES += $(shell find src/x86_64/bios -type f -name *.c)
-    ASM_SOURCES += $(shell find src/x86_64/bios -type f -name *.asm)
+    C_SOURCES += $(shell find src -type f -name *.x86_64.bios.c)
+    ASM_SOURCES += $(shell find src -type f -name *.x86_64.bios.asm)
 endif
 
 ASM_OBJ := $(patsubst %.asm,$(BUILD)/core/%.o,$(ASM_SOURCES))
@@ -28,13 +28,13 @@ CFLAGS += -Wall -Wextra -Wshadow -Wvla -Wno-unused-variable
 LDFLAGS := -nostdlib -static -z noexecstack
 
 ifeq ($(ARCH), x86_64)
-    DEFINES += -D __ARCH_X86_64
+    DEFINES += -D __X86_64
     CFLAGS += -mabi=sysv -mgeneral-regs-only
     LDFLAGS += -z common-page-size=0x1000 -z max-page-size=0x1000
 endif
 
 ifeq ($(TARGET), x86_64-bios)
-    DEFINES += -D __TARTARUS_NO_PTR
+    DEFINES += -D __BIOS -D __TARTARUS_NO_PTR
     ASMFLAGS += -f elf32
     CFLAGS += -m32 -march=i686
 endif
@@ -45,7 +45,7 @@ $(BUILD)/core/tartarus.sys: $(BUILD)/core/tartarus.elf
 	$(OBJCOPY) -O binary $< $@
 
 $(BUILD)/core/tartarus.elf: $(C_OBJ) $(ASM_OBJ) $(LIBGCC_DIR)/i686.a
-	$(LD) $(LDFLAGS) -T"link.x86_64-bios.ld" -o $@ $^
+	$(LD) $(LDFLAGS) -T"link.x86_64.bios.ld" -o $@ $^
 endif
 
 # Wildcard Targets

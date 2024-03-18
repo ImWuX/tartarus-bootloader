@@ -1,6 +1,6 @@
 #include "pmm.h"
 #include <tartarus.h>
-#include <common/log.h>
+#include <log.h>
 
 #define IS_STRICT(type) ((type) == TARTARUS_MEMORY_MAP_TYPE_USABLE || (type) == TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE)
 
@@ -17,10 +17,10 @@ static region_t regions[] = {
 };
 
 uint16_t g_pmm_map_size = 0;
-tartarus_memory_map_entry_t g_pmm_map[MAX_MEMAP_ENTRIES];
+tartarus_memory_map_entry_t g_pmm_map[PMM_MAX_MEMAP_ENTRIES];
 
 static void map_insert(int index, tartarus_memory_map_entry_t entry) {
-    if(g_pmm_map_size == MAX_MEMAP_ENTRIES) log_panic("PMM", "Memory map overflow");
+    if(g_pmm_map_size == PMM_MAX_MEMAP_ENTRIES) log_panic("PMM", "Memory map overflow");
     for(int i = g_pmm_map_size; i > index; i--) {
         g_pmm_map[i] = g_pmm_map[i - 1];
     }
@@ -100,16 +100,16 @@ void pmm_init_sanitize() {
     restart_align:
     for(int i = 0; i < g_pmm_map_size; i++) {
         if(g_pmm_map[i].type != TARTARUS_MEMORY_MAP_TYPE_USABLE && g_pmm_map[i].type != TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE) continue;
-        uint64_t diff = PAGE_SIZE - g_pmm_map[i].base % PAGE_SIZE;
-        if(diff != PAGE_SIZE) {
-            if(g_pmm_map[i].length < diff || g_pmm_map[i].length - diff < PAGE_SIZE) {
+        uint64_t diff = PMM_PAGE_SIZE - g_pmm_map[i].base % PMM_PAGE_SIZE;
+        if(diff != PMM_PAGE_SIZE) {
+            if(g_pmm_map[i].length < diff || g_pmm_map[i].length - diff < PMM_PAGE_SIZE) {
                 map_delete(i);
                 goto restart_align;
             }
             g_pmm_map[i].base += diff;
             g_pmm_map[i].length -= diff;
         }
-        g_pmm_map[i].length -= g_pmm_map[i].length % PAGE_SIZE;
+        g_pmm_map[i].length -= g_pmm_map[i].length % PMM_PAGE_SIZE;
     }
 
     for(int i = 1; i < g_pmm_map_size; i++) {
@@ -123,13 +123,13 @@ void pmm_init_sanitize() {
 
     for(int i = 0; i < g_pmm_map_size; i++) {
         if(g_pmm_map[i].type != TARTARUS_MEMORY_MAP_TYPE_USABLE && g_pmm_map[i].type != TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE) continue;
-        if(g_pmm_map[i].base >= PAGE_SIZE) continue;
-        if(g_pmm_map[i].length <= PAGE_SIZE) {
+        if(g_pmm_map[i].base >= PMM_PAGE_SIZE) continue;
+        if(g_pmm_map[i].length <= PMM_PAGE_SIZE) {
             map_delete(i);
             break;
         } else {
-            g_pmm_map[i].base += PAGE_SIZE;
-            g_pmm_map[i].length -= PAGE_SIZE;
+            g_pmm_map[i].base += PMM_PAGE_SIZE;
+            g_pmm_map[i].length -= PMM_PAGE_SIZE;
             break;
         }
     }
@@ -141,7 +141,7 @@ void pmm_init_sanitize() {
  */
 bool pmm_convert(tartarus_memory_map_type_t src_type, tartarus_memory_map_type_t dest_type, uint64_t base, uint64_t length) {
     if(length == 0) log_panic("PMM", "Tried to create a zero-length entry");
-    if(IS_STRICT(dest_type) && (base % PAGE_SIZE != 0 || length % PAGE_SIZE != 0)) log_panic("PMM", "Tried to convert a non-aligned region to a strict type");
+    if(IS_STRICT(dest_type) && (base % PMM_PAGE_SIZE != 0 || length % PMM_PAGE_SIZE != 0)) log_panic("PMM", "Tried to convert a non-aligned region to a strict type");
     int i = 0;
     for(; i < g_pmm_map_size; i++) {
         if(g_pmm_map[i].type != src_type) continue;
@@ -193,7 +193,7 @@ void *pmm_alloc_ext(tartarus_memory_map_type_t src_type, tartarus_memory_map_typ
     uintptr_t area_start = regions[area].bottom_boundary;
     uintptr_t area_end = regions[area].top_boundary;
 
-    size_t length = page_count * PAGE_SIZE;
+    size_t length = page_count * PMM_PAGE_SIZE;
     for(int i = 0; i < g_pmm_map_size; i++) {
         if(g_pmm_map[i].type != src_type) continue;
         if(g_pmm_map[i].base + g_pmm_map[i].length <= area_start) continue; // entry ends before area start
@@ -221,7 +221,7 @@ void *pmm_alloc_page(pmm_area_t area) {
 }
 
 void pmm_free(void *address, size_t page_count) {
-    if(!pmm_convert(TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, TARTARUS_MEMORY_MAP_TYPE_USABLE, (uint64_t) (uintptr_t) address, (uint64_t) page_count * PAGE_SIZE)) return;
+    if(!pmm_convert(TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, TARTARUS_MEMORY_MAP_TYPE_USABLE, (uint64_t) (uintptr_t) address, (uint64_t) page_count * PMM_PAGE_SIZE)) return;
     log_panic("PMM", "Cannot free an unallocated area");
 }
 

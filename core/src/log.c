@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <cpu.h>
-#include <common/lib/format.h>
+#include <lib/format.h>
+#include <sys/cpu.h>
 
 static log_sink_t g_sink = NULL;
 
