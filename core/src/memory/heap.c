@@ -1,4 +1,5 @@
 #include "heap.h"
+#include <lib/math.h>
 #include <log.h>
 #include <memory/pmm.h>
 
@@ -11,7 +12,7 @@ typedef struct heap_entry {
     struct heap_entry *last;
 } heap_entry_t;
 
-static heap_entry_t *g_heap;
+static heap_entry_t *g_heap = NULL;
 
 static heap_entry_t *split(heap_entry_t *entry, size_t truncate_to) {
     size_t left = entry->size - truncate_to;
@@ -47,7 +48,7 @@ void *heap_alloc(size_t size) {
         current_entry->free = false;
         return (void *) ((uintptr_t) current_entry + sizeof(heap_entry_t));
     }
-    alloc((size + sizeof(heap_entry_t) + PMM_PAGE_SIZE - 1) / PMM_PAGE_SIZE);
+    alloc(MATH_DIV_CEIL(size + sizeof(heap_entry_t), PMM_PAGE_SIZE));
     return heap_alloc(size);
 }
 
