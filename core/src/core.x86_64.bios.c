@@ -4,6 +4,7 @@
 #include <memory/pmm.h>
 #include <sys/msr.x86_64.h>
 #include <sys/e820.x86_64.bios.h>
+#include <dev/disk.h>
 
 #define CPUID_NX (1 << 20)
 #define MSR_EFER 0xC0000080
@@ -21,6 +22,24 @@ static void log_sink(char c) {
     asm volatile("outb %0, %1" : : "a" (c), "Nd" (0x3F8));
 }
 
+static int parse_e820() {
+    e820_entry_t e820[E820_MAX];
+    int e820_size = e820_load((void *) &e820, E820_MAX);
+    for(int i = 0; i < e820_size; i++) {
+        tartarus_memory_map_type_t type;
+        switch(e820[i].type) {
+            case E820_TYPE_USABLE: type = TARTARUS_MEMORY_MAP_TYPE_USABLE; break;
+            case E820_TYPE_ACPI_RECLAIMABLE: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_RECLAIMABLE; break;
+            case E820_TYPE_ACPI_NVS: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_NVS; break;
+            case E820_TYPE_BAD: type = TARTARUS_MEMORY_MAP_TYPE_BAD; break;
+            case E820_TYPE_RESERVED:
+            default: type = TARTARUS_MEMORY_MAP_TYPE_RESERVED; break;
+        }
+        pmm_init_add((tartarus_memory_map_entry_t) { .base = e820[i].address, .length = e820[i].length, .type = type });
+    }
+    return e820_size;
+}
+
 [[noreturn]] void core() {
     log_sink('\n');
     log_init(log_sink);
@@ -36,32 +55,22 @@ static void log_sink(char c) {
     }
 
     // Setup physical memory
-    e820_entry_t e820[E820_MAX];
-    int e820_size = e820_load((void *) &e820, E820_MAX);
-    for(int i = 0; i < e820_size; i++) {
-        tartarus_memory_map_type_t type;
-        switch(e820[i].type) {
-            case E820_TYPE_USABLE: type = TARTARUS_MEMORY_MAP_TYPE_USABLE; break;
-            case E820_TYPE_ACPI_RECLAIMABLE: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_RECLAIMABLE; break;
-            case E820_TYPE_ACPI_NVS: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_NVS; break;
-            case E820_TYPE_BAD: type = TARTARUS_MEMORY_MAP_TYPE_BAD; break;
-            case E820_TYPE_RESERVED:
-            default: type = TARTARUS_MEMORY_MAP_TYPE_RESERVED; break;
-        }
-        pmm_init_add((tartarus_memory_map_entry_t) { .base = e820[i].address, .length = e820[i].length, .type = type });
-    }
+    int e820_size = parse_e820();
     pmm_init_sanitize();
     log("CORE", "Initialized physical memory (%i memory map entries)", e820_size);
 
     // Protect initial stack
-    pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, 0x6000, 0x1000);
+    pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, 0x3000, 0x5000);
     pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, (uintptr_t) __tartarus_start, (uintptr_t) __tartarus_end - (uintptr_t) __tartarus_start);
 
     // Allocate a page early to get one low enough for smp startup
     void *smp_rsv_page = pmm_alloc_page(PMM_AREA_CONVENTIONAL);
     if((uintptr_t) smp_rsv_page >= 0x100000) log_panic("CORE", "Unable to reserve a low page for SMP startup");
 
-    
+    disk_initialize();
+    int disk_count = 0;
+    for(disk_t *disk = g_disks; disk != NULL; disk = disk->next) disk_count++;
+    log("CORE", "Initialized disks (%i disks)", disk_count);
 
     for(;;);
 }
