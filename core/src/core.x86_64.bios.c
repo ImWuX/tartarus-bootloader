@@ -3,6 +3,7 @@
 #include <log.h>
 #include <config.h>
 #include <memory/pmm.h>
+#include <memory/vmm.h>
 #include <memory/heap.h>
 #include <sys/msr.x86_64.h>
 #include <sys/e820.x86_64.bios.h>
@@ -16,12 +17,16 @@
 #define MSR_EFER_NX (1 << 11)
 #define E820_MAX 512
 
+#define HHDM_MIN_SIZE 0x100000000
+#define HHDM_OFFSET 0xFFFF800000000000
+#define HHDM_FLAGS (VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_EXEC)
+
 typedef int SYMBOL[];
 
 extern SYMBOL __tartarus_start;
 extern SYMBOL __tartarus_end;
 
-static bool g_nx_support = false;
+bool g_cpu_nx_support = false;
 
 static void log_sink(char c) {
     asm volatile("outb %0, %1" : : "a" (c), "Nd" (0x3F8));
@@ -52,8 +57,8 @@ static int parse_e820() {
 
     // Enable NX
     unsigned int edx = 0, unused;
-    if(__get_cpuid(0x80000001, &unused, &unused, &unused, &edx) != 0) g_nx_support = (edx & CPUID_NX) != 0;
-    if(g_nx_support) {
+    if(__get_cpuid(0x80000001, &unused, &unused, &unused, &edx) != 0) g_cpu_nx_support = (edx & CPUID_NX) != 0;
+    if(g_cpu_nx_support) {
         msr_write(MSR_EFER, msr_read(MSR_EFER) | MSR_EFER_NX);
     } else {
         log_warning("CORE", "CPU does not support EFER.NXE");
@@ -71,6 +76,31 @@ static int parse_e820() {
     // Allocate a page early to get one low enough for smp startup
     void *smp_rsv_page = pmm_alloc_page(PMM_AREA_CONVENTIONAL);
     if((uintptr_t) smp_rsv_page >= 0x100000) log_panic("CORE", "Unable to reserve a low page for SMP startup");
+
+    // Initialize VMM
+    void *address_space = vmm_initialize();
+    vmm_map(address_space, PMM_PAGE_SIZE, PMM_PAGE_SIZE, HHDM_MIN_SIZE - PMM_PAGE_SIZE, HHDM_FLAGS);
+    vmm_map(address_space, PMM_PAGE_SIZE, HHDM_OFFSET + PMM_PAGE_SIZE, HHDM_MIN_SIZE - PMM_PAGE_SIZE, HHDM_FLAGS);
+
+    uint64_t hhdm_size = HHDM_MIN_SIZE;
+    for(uint16_t i = 0; i < g_pmm_map_size; i++) {
+        if(g_pmm_map[i].base + g_pmm_map[i].length < HHDM_MIN_SIZE) continue;
+        uint64_t base = g_pmm_map[i].base;
+        uint64_t length = g_pmm_map[i].length;
+        if(base < HHDM_MIN_SIZE) {
+            length -= HHDM_MIN_SIZE - base;
+            base = HHDM_MIN_SIZE;
+        }
+        if(base % PMM_PAGE_SIZE != 0) {
+            length += base % PMM_PAGE_SIZE;
+            base -= base % PMM_PAGE_SIZE;
+        }
+        if(length % PMM_PAGE_SIZE != 0) length += PMM_PAGE_SIZE - length % PMM_PAGE_SIZE;
+        if(base + length > hhdm_size) hhdm_size = base + length;
+        vmm_map(address_space, base, base, length, HHDM_FLAGS);
+        vmm_map(address_space, base, HHDM_OFFSET + base, length, HHDM_FLAGS);
+    }
+    log("CORE", "Initialized virtual memory");
 
     // Initialize disk
     disk_initialize();
@@ -93,6 +123,7 @@ static int parse_e820() {
     config_t *config = config_parse(config_node);
     log("CORE", "Loaded config");
 
+    // Initialize ACPI
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
