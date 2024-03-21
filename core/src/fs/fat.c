@@ -31,6 +31,7 @@
 #define DIR_ENTRY_ATTR_VOLUME_ID (1 << 3)
 #define DIR_ENTRY_ATTR_DIRECTORY (1 << 4)
 #define DIR_ENTRY_ATTR_ARCHIVE (1 << 5)
+#define DIR_ENTRY_ATTR_LFN_MASK (DIR_ENTRY_ATTR_READ_ONLY | DIR_ENTRY_ATTR_HIDDEN | DIR_ENTRY_ATTR_SYSTEM | DIR_ENTRY_ATTR_VOLUME_ID)
 #define DIR_ENTRY_IS_FREE(DIR_ENTRY) ((DIR_ENTRY)->name[0] == 0xE5 || (DIR_ENTRY)->name[0] == 0)
 #define DIR_ENTRY_IS_LONG_NAME(DIR_ENTRY) ((DIR_ENTRY)->attributes == 0xF)
 #define DIR_ENTRY_IS_DIRECTORY(DIR_ENTRY) ((DIR_ENTRY)->attributes & DIR_ENTRY_ATTR_DIRECTORY)
@@ -91,6 +92,17 @@ typedef struct {
     uint16_t cluster_low;
     uint32_t file_size;
 } __attribute__((packed)) directory_entry_t;
+
+typedef struct {
+    uint8_t order;
+    uint8_t name1[10];
+    uint8_t attributes;
+    uint8_t type;
+    uint8_t checksum;
+    uint8_t name2[12];
+    uint16_t cluster_low;
+    uint8_t name3[4];
+} __attribute__((packed)) lfn_directory_entry_t;
 
 typedef struct {
     disk_part_t *partition;
@@ -167,15 +179,29 @@ static vfs_node_t *create_node(vfs_t *vfs, node_type_t type, uint32_t cluster, u
     return node;
 }
 
+static bool name_to_8_3(char *src, char dest[11]) {
+    bool ext = false;
+    int j = 0;
+    for(int i = 0; src[i] != 0; i++) {
+        if(src[i] == '.') {
+            if(ext) return false;
+            ext = true;
+            for(; j < 8; j++) dest[j] = ' ';
+            continue;
+        }
+        if(j >= 11 || (!ext && j >= 8)) return false;
+        dest[j++] = (src[i] >= 'a' && src[i] <= 'z') ? src[i] - 0x20 : src[i];
+    }
+    return true;
+}
+
 static bool cmp_dir(directory_entry_t *entry, char *name) {
     if(DIR_ENTRY_IS_FREE(entry)) return false;
     if(DIR_ENTRY_IS_LONG_NAME(entry)) return false; // TODO: Dont ignore long names
 
-    int name_len = strlen(name);
-    if(name_len > 11) name_len = 11;
-    if(memcmp(entry->name, name, name_len) != 0) return false;
-    for(int i = name_len; i < 11; i++) if(entry->name[i] != ' ') return false;
-    return true;
+    char sfn[11];
+    if(!name_to_8_3(name, sfn)) return false;
+    return memcmp(entry->name, sfn, 11) == 0;
 }
 
 static vfs_node_t *node_lookup(vfs_node_t *node, char *name) {
@@ -185,6 +211,7 @@ static vfs_node_t *node_lookup(vfs_node_t *node, char *name) {
         directory_entry_t entry;
         for(uint16_t i = 0; i < FS_DATA(node->vfs)->fat_meta.root_dir_entry_count; i++) {
             disk_read(FS_DATA(node->vfs)->partition, ROOT_OFFSET(FS_DATA(node->vfs)) + (i * sizeof(directory_entry_t)), sizeof(directory_entry_t), &entry);
+            if(entry.name[0] == 0) break;
             if(!cmp_dir(&entry, name)) continue;
             return create_node(node->vfs, DIR_ENTRY_IS_DIRECTORY(&entry) ? NODE_TYPE_DIR : NODE_TYPE_FILE, entry.cluster_low, entry.file_size);
         }
@@ -197,6 +224,7 @@ static vfs_node_t *node_lookup(vfs_node_t *node, char *name) {
         if(CLUSTER_IS_BAD(cluster, FS_DATA(node->vfs)->fat_meta.type)) log_panic("FAT", "Bad cluster");
         disk_read(FS_DATA(node->vfs)->partition, DATA_OFFSET(FS_DATA(node->vfs)) + (cluster - 2) * FS_DATA(node->vfs)->fat_meta.cluster_size, FS_DATA(node->vfs)->fat_meta.cluster_size, entries);
         for(unsigned int i = 0; i < FS_DATA(node->vfs)->fat_meta.cluster_size / sizeof(directory_entry_t); i++) {
+            if(entries[i].name[0] == 0) goto exit;
             if(!cmp_dir(&entries[i], name)) continue;
             uint32_t entry_cluster = entries[i].cluster_low;
             if(FS_DATA(node->vfs)->fat_meta.type == FAT_TYPE_32) entry_cluster |= (entries[i].cluster_high << 16);
@@ -204,6 +232,7 @@ static vfs_node_t *node_lookup(vfs_node_t *node, char *name) {
         }
         cluster = next_cluster(FS_DATA(node->vfs), cluster);
     }
+    exit:
     heap_free(entries);
     return NULL;
 }
