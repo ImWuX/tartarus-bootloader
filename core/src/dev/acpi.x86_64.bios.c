@@ -8,6 +8,12 @@
 #define BIOS_AREA 0x400
 #define BIOS_AREA_EBDA 0xE
 
+static bool checksum(uint8_t *src, uint32_t size) {
+    uint32_t checksum = 0;
+    for(uint8_t i = 0; i < size; i++) checksum += src[i];
+    return (checksum & 1) == 0;
+}
+
 static uintptr_t scan_region(uintptr_t start, uintptr_t end) {
     uintptr_t addr = start;
     while(addr < end) {

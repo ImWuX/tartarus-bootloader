@@ -1,19 +1,12 @@
 #include "acpi.h"
 #include <log.h>
 
-static bool checksum(uint8_t *src, uint32_t size) {
-    uint32_t checksum = 0;
-    for(uint8_t i = 0; i < size; i++) checksum += src[i];
-    return (checksum & 1) == 0;
-}
-
 acpi_sdt_header_t *acpi_find_table(acpi_rsdp_t *rsdp, const char *signature) {
     int entry_count;
     bool extended = false;
     uintptr_t buffer;
     if(rsdp->revision > 0) {
         acpi_rsdp_ext_t *rsdp_ext = (acpi_rsdp_ext_t *) rsdp;
-        if(!checksum(((uint8_t *) rsdp_ext) + sizeof(acpi_rsdp_t), sizeof(acpi_rsdp_ext_t) - sizeof(acpi_rsdp_t))) log_panic("ACPI", "Checksum for Extended RSDP failed");
         acpi_sdt_header_t *xsdt = (acpi_sdt_header_t *) (uintptr_t) rsdp_ext->xsdt_address;
         entry_count = (xsdt->length - sizeof(acpi_sdt_header_t)) / sizeof(uint64_t);
         extended = true;
