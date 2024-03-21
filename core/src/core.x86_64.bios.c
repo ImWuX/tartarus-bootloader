@@ -7,6 +7,7 @@
 #include <sys/msr.x86_64.h>
 #include <sys/e820.x86_64.bios.h>
 #include <dev/disk.h>
+#include <dev/acpi.h>
 #include <fs/vfs.h>
 #include <fs/fat.h>
 
@@ -92,6 +93,8 @@ static int parse_e820() {
     config_t *config = config_parse(config_node);
     log("CORE", "Loaded config");
 
+    acpi_rsdp_t *rsdp = acpi_find_rsdp();
+    if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
     config_free(config);
     for(;;);
