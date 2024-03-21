@@ -2,6 +2,7 @@
 #include <cpuid.h>
 #include <log.h>
 #include <config.h>
+#include <elf.h>
 #include <memory/pmm.h>
 #include <memory/vmm.h>
 #include <memory/heap.h>
@@ -121,11 +122,20 @@ static int parse_e820() {
     }
     if(config_node == NULL) log_panic("CORE", "Could not locate a config file");
     config_t *config = config_parse(config_node);
-    log("CORE", "Loaded config");
+    log("CORE", "Config loaded");
 
     // Initialize ACPI
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
+
+    // Load kernel
+    char *kernel_path = config_read_string(config, "KERNEL");
+    if(kernel_path == NULL) log_panic("CORE", "No kernel path provided");
+    vfs_node_t *kernel_node = vfs_lookup(config_node->vfs, kernel_path);
+    if(kernel_node == NULL) log_panic("CORE", "Kernel not present at \"%s\"", kernel_path);
+    elf_loaded_image_t *image = elf_load(kernel_node, address_space);
+    if(image == NULL) log_panic("CORE", "Failed to load kernel");
+    log("CORE", "Kernel loaded");
 
     config_free(config);
     for(;;);

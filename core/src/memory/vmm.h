@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 
+// These flags are assumed to match the corresponding ELF flags
 #define VMM_FLAG_EXEC (1 << 0)
 #define VMM_FLAG_WRITE (1 << 1)
 #define VMM_FLAG_READ (1 << 2)
