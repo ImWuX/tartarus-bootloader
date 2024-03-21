@@ -22,7 +22,7 @@
 #define PT_PHDR 6
 #define PT_TLS 7
 
-#define ELF_ASSERT(CONDITION, WARN_MSG) if(CONDITION) { log_warning("ELF", WARN_MSG); return NULL; }
+#define ELF_ASSERT(ASSERTION, WARN_MSG) if(!(ASSERTION)) { log_warning("ELF", WARN_MSG); return NULL; }
 
 typedef uint64_t elf64_addr_t;
 typedef uint64_t elf64_off_t;
@@ -75,15 +75,15 @@ elf_loaded_image_t *elf_load(vfs_node_t *file, void *address_space) {
     elf64_header_t header;
     if(file->ops->read(file, &header, 0, sizeof(elf64_header_t)) != sizeof(elf64_header_t)) log_panic("ELF", "Unable to read header from ELF");
 
-    ELF_ASSERT(memcmp(header.identifier.magic, ELF_MAGIC, 4), "Invalid identififer");
+    ELF_ASSERT(memcmp(header.identifier.magic, ELF_MAGIC, 4) == 0, "Invalid identififer");
 #ifdef __X86_64
-    ELF_ASSERT(header.machine != MACHINE_386, "Only the i386:x86-64 instruction-set is supported");
-    ELF_ASSERT(header.identifier.encoding != LITTLE_ENDIAN, "Only little endian encoding is supported");
+    ELF_ASSERT(header.machine == MACHINE_386, "Only the i386:x86-64 instruction-set is supported");
+    ELF_ASSERT(header.identifier.encoding == LITTLE_ENDIAN, "Only little endian encoding is supported");
 #endif
-    ELF_ASSERT(header.identifier.class != CLASS64, "Only the 64bit class is supported");
-    ELF_ASSERT(header.version > 1, "Unsupported version");
-    ELF_ASSERT(header.type != TYPE_EXECUTABLE, "Only executables are supported");
-    ELF_ASSERT(header.program_header_offset == 0 || header.program_header_entry_count <= 0, "No program headers?");
+    ELF_ASSERT(header.identifier.class == CLASS64, "Only the 64bit class is supported");
+    ELF_ASSERT(header.version <= 1, "Unsupported version");
+    ELF_ASSERT(header.type == TYPE_EXECUTABLE, "Only executables are supported");
+    ELF_ASSERT(header.program_header_offset > 0 && header.program_header_entry_count > 0, "No program headers?");
 
     elf64_addr_t lowest_vaddr = UINT64_MAX;
     elf64_addr_t highest_vaddr = 0;
