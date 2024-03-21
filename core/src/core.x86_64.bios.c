@@ -1,10 +1,14 @@
 #include <stdint.h>
 #include <cpuid.h>
 #include <log.h>
+#include <config.h>
 #include <memory/pmm.h>
+#include <memory/heap.h>
 #include <sys/msr.x86_64.h>
 #include <sys/e820.x86_64.bios.h>
 #include <dev/disk.h>
+#include <fs/vfs.h>
+#include <fs/fat.h>
 
 #define CPUID_NX (1 << 20)
 #define MSR_EFER 0xC0000080
@@ -67,10 +71,28 @@ static int parse_e820() {
     void *smp_rsv_page = pmm_alloc_page(PMM_AREA_CONVENTIONAL);
     if((uintptr_t) smp_rsv_page >= 0x100000) log_panic("CORE", "Unable to reserve a low page for SMP startup");
 
+    // Initialize disk
     disk_initialize();
     int disk_count = 0;
     for(disk_t *disk = g_disks; disk != NULL; disk = disk->next) disk_count++;
     log("CORE", "Initialized disks (%i disks)", disk_count);
 
+    // Locate config
+    vfs_node_t *config_node = NULL;
+    for(disk_t *disk = g_disks; disk != NULL; disk = disk->next) {
+        for(disk_part_t *partition = disk->partitions; partition != NULL; partition = partition->next) {
+            vfs_t *fat_fs = fat_initialize(partition);
+            if(fat_fs == NULL) continue;
+            vfs_node_t *node = vfs_lookup(fat_fs, "/tartarus.cfg");
+            if(node == NULL) continue;
+            config_node = node;
+        }
+    }
+    if(config_node == NULL) log_panic("CORE", "Could not locate a config file");
+    config_t *config = config_parse(config_node);
+    log("CORE", "Loaded config");
+
+
+    config_free(config);
     for(;;);
 }
