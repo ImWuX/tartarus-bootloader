@@ -84,8 +84,8 @@ void config_free(config_t *config) {
     heap_free(config);
 }
 
-char *config_read_value(config_t *config, const char *key, char *default_value) {
+char *config_read_string(config_t *config, const char *key) {
     config_entry_t *entry = find_entry(config, key);
-    if(entry == NULL) return default_value;
+    if(entry == NULL) return NULL;
     return entry->value;
 }
