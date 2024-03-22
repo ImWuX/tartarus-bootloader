@@ -8,6 +8,8 @@
 #include <memory/heap.h>
 #include <sys/msr.x86_64.h>
 #include <sys/e820.x86_64.bios.h>
+#include <sys/lapic.x86_64.h>
+#include <sys/smp.x86_64.h>
 #include <dev/disk.h>
 #include <dev/acpi.h>
 #include <fs/vfs.h>
@@ -130,12 +132,25 @@ static int parse_e820() {
 
     // Load kernel
     char *kernel_path = config_read_string(config, "KERNEL");
-    if(kernel_path == NULL) log_panic("CORE", "No kernel path provided");
+    if(kernel_path == NULL) log_panic("CORE", "No kernel path provided in config");
     vfs_node_t *kernel_node = vfs_lookup(config_node->vfs, kernel_path);
     if(kernel_node == NULL) log_panic("CORE", "Kernel not present at \"%s\"", kernel_path);
     elf_loaded_image_t *image = elf_load(kernel_node, address_space);
     if(image == NULL) log_panic("CORE", "Failed to load kernel");
     log("CORE", "Kernel loaded");
+
+    // SMP
+    if(config_read_bool(config, "SMP", true)) {
+        if(!lapic_is_supported()) log_panic("CORE", "LAPIC not supported. LAPIC is required for SMP initialization");
+        acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
+        if(!madt) log_panic("CORE", "ACPI MADT table not present");
+        smp_cpu_t *cpus = smp_initialize_aps(madt, smp_rsv_page, address_space);
+    }
+
+    // Protocol
+    char *protocol = config_read_string(config, "PROTOCOL");
+    if(protocol == NULL) log_panic("CORE", "No protocol defined in config");
+    log("CORE", "Protocol is %s", protocol);
 
     config_free(config);
     for(;;);
