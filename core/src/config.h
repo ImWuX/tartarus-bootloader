@@ -14,3 +14,4 @@ config_t *config_parse(vfs_node_t *config_node);
 void config_free(config_t *config);
 
 char *config_read_string(config_t *config, const char *key);
+bool config_read_bool(config_t *config, const char *key, bool default_value);

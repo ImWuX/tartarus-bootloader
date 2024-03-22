@@ -42,21 +42,18 @@ config_t *config_parse(vfs_node_t *config_node) {
     size_t read_count = config_node->ops->read(config_node, config_data, 0, attr.size);
     if(read_count != attr.size) log_panic("CONFIG", "Failed to read config");
 
-    unsigned int config_entry_limit = 1;
-    unsigned int config_entry_count = 0;
-    config_entry_t *entries = heap_alloc(sizeof(config_entry_t) * config_entry_limit);
+    unsigned int entry_limit = 1;
+    unsigned int entry_count = 0;
+    config_entry_t *entries = heap_alloc(sizeof(config_entry_t) * entry_limit);
     for(size_t i = 0; i < attr.size;) {
         token_t key = tokenize(config_data, attr.size, i, '=');
         token_t value = tokenize(config_data, attr.size, key.next + 1, '\n');
         i = value.next;
         if(key.length == 0 || value.length == 0) continue;
 
-        if(config_entry_count >= config_entry_limit) {
-            config_entry_limit += 5;
-            config_entry_t *new_entries = heap_alloc(sizeof(config_entry_t) * config_entry_limit);
-            memcpy(new_entries, entries, sizeof(config_entry_t) * config_entry_count);
-            heap_free(entries);
-            entries = new_entries;
+        if(entry_count >= entry_limit) {
+            entry_limit += 5;
+            entries = heap_realloc(entries, sizeof(config_entry_t) * entry_limit);
         }
 
         char *key_str = heap_alloc(key.length + 1);
@@ -66,12 +63,12 @@ config_t *config_parse(vfs_node_t *config_node) {
         memcpy(value_str, &config_data[value.start], value.length);
         value_str[value.length] = 0;
 
-        entries[config_entry_count++] = (config_entry_t) { .key = key_str, .value = value_str };
+        entries[entry_count++] = (config_entry_t) { .key = key_str, .value = value_str };
     }
 
-    config_t *config = heap_alloc(sizeof(config_t) + sizeof(config_entry_t) * config_entry_count);
-    config->entry_count = config_entry_count;
-    memcpy(&config->entries, entries, sizeof(config_entry_t) * config_entry_count);
+    config_t *config = heap_alloc(sizeof(config_t) + sizeof(config_entry_t) * entry_count);
+    config->entry_count = entry_count;
+    memcpy(&config->entries, entries, sizeof(config_entry_t) * entry_count);
     heap_free(entries);
     return config;
 }
@@ -88,4 +85,10 @@ char *config_read_string(config_t *config, const char *key) {
     config_entry_t *entry = find_entry(config, key);
     if(entry == NULL) return NULL;
     return entry->value;
+}
+
+bool config_read_bool(config_t *config, const char *key, bool default_value) {
+    config_entry_t *entry = find_entry(config, key);
+    if(entry == NULL) return default_value;
+    return strcmp(entry->value, "true") == 0 || strcmp(entry->value, "TRUE") == 0;
 }
