@@ -72,19 +72,19 @@ bool fb_acquire(uint32_t target_width, uint32_t target_height, bool strict_rgb, 
     if(vbe_info.version_major < 3) {
         out->pitch = mode_info.pitch;
         out->mask_red_size = mode_info.red_mask;
-        out->mask_red_shift = mode_info.red_position;
+        out->mask_red_position = mode_info.red_position;
         out->mask_green_size = mode_info.green_mask;
-        out->mask_green_shift = mode_info.green_position;
+        out->mask_green_position = mode_info.green_position;
         out->mask_blue_size = mode_info.blue_mask;
-        out->mask_blue_shift = mode_info.blue_position;
+        out->mask_blue_position = mode_info.blue_position;
     } else {
         out->pitch = mode_info.linear_pitch;
         out->mask_red_size = mode_info.linear_red_mask_size;
-        out->mask_red_shift = mode_info.linear_red_mask_position;
+        out->mask_red_position = mode_info.linear_red_mask_position;
         out->mask_green_size = mode_info.linear_green_mask_size;
-        out->mask_green_shift = mode_info.linear_green_mask_position;
+        out->mask_green_position = mode_info.linear_green_mask_position;
         out->mask_blue_size = mode_info.linear_blue_mask_size;
-        out->mask_blue_shift = mode_info.linear_blue_mask_position;
+        out->mask_blue_position = mode_info.linear_blue_mask_position;
     }
     out->bpp = mode_info.bpp;
     out->width = mode_info.width;
