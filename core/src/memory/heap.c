@@ -1,7 +1,7 @@
 #include "heap.h"
 #include <lib/mem.h>
 #include <lib/math.h>
-#include <log.h>
+#include <common/log.h>
 #include <memory/pmm.h>
 
 #define MINIMUM_ENTRY_SIZE 8

@@ -1,5 +1,5 @@
 #include "acpi.h"
-#include <log.h>
+#include <common/log.h>
 
 acpi_sdt_header_t *acpi_find_table(acpi_rsdp_t *rsdp, const char *signature) {
     int entry_count;

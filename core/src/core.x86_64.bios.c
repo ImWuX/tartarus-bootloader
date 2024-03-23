@@ -1,8 +1,9 @@
 #include <stdint.h>
 #include <cpuid.h>
-#include <log.h>
-#include <config.h>
-#include <elf.h>
+#include <common/log.h>
+#include <common/config.h>
+#include <common/elf.h>
+#include <lib/str.h>
 #include <memory/pmm.h>
 #include <memory/vmm.h>
 #include <memory/heap.h>
@@ -14,6 +15,7 @@
 #include <dev/acpi.h>
 #include <fs/vfs.h>
 #include <fs/fat.h>
+#include <protocol/protocol.h>
 
 #define CPUID_NX (1 << 20)
 #define MSR_EFER 0xC0000080
@@ -35,24 +37,6 @@ static void log_sink(char c) {
     asm volatile("outb %0, %1" : : "a" (c), "Nd" (0x3F8));
 }
 
-static int parse_e820() {
-    e820_entry_t e820[E820_MAX];
-    int e820_size = e820_load((void *) &e820, E820_MAX);
-    for(int i = 0; i < e820_size; i++) {
-        tartarus_memory_map_type_t type;
-        switch(e820[i].type) {
-            case E820_TYPE_USABLE: type = TARTARUS_MEMORY_MAP_TYPE_USABLE; break;
-            case E820_TYPE_ACPI_RECLAIMABLE: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_RECLAIMABLE; break;
-            case E820_TYPE_ACPI_NVS: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_NVS; break;
-            case E820_TYPE_BAD: type = TARTARUS_MEMORY_MAP_TYPE_BAD; break;
-            case E820_TYPE_RESERVED:
-            default: type = TARTARUS_MEMORY_MAP_TYPE_RESERVED; break;
-        }
-        pmm_init_add((tartarus_memory_map_entry_t) { .base = e820[i].address, .length = e820[i].length, .type = type });
-    }
-    return e820_size;
-}
-
 [[noreturn]] void core() {
     log_sink('\n');
     log_init(log_sink);
@@ -68,7 +52,20 @@ static int parse_e820() {
     }
 
     // Setup physical memory
-    int e820_size = parse_e820();
+    e820_entry_t e820[E820_MAX];
+    int e820_size = e820_load((void *) &e820, E820_MAX);
+    for(int i = 0; i < e820_size; i++) {
+        tartarus_memory_map_type_t type;
+        switch(e820[i].type) {
+            case E820_TYPE_USABLE: type = TARTARUS_MEMORY_MAP_TYPE_USABLE; break;
+            case E820_TYPE_ACPI_RECLAIMABLE: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_RECLAIMABLE; break;
+            case E820_TYPE_ACPI_NVS: type = TARTARUS_MEMORY_MAP_TYPE_ACPI_NVS; break;
+            case E820_TYPE_BAD: type = TARTARUS_MEMORY_MAP_TYPE_BAD; break;
+            case E820_TYPE_RESERVED:
+            default: type = TARTARUS_MEMORY_MAP_TYPE_RESERVED; break;
+        }
+        pmm_init_add((tartarus_memory_map_entry_t) { .base = e820[i].address, .length = e820[i].length, .type = type });
+    }
     pmm_init_sanitize();
     log("CORE", "Initialized physical memory (%i memory map entries)", e820_size);
 
@@ -130,15 +127,6 @@ static int parse_e820() {
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
-    // Load kernel
-    char *kernel_path = config_read_string(config, "KERNEL");
-    if(kernel_path == NULL) log_panic("CORE", "No kernel path provided in config");
-    vfs_node_t *kernel_node = vfs_lookup(config_node->vfs, kernel_path);
-    if(kernel_node == NULL) log_panic("CORE", "Kernel not present at \"%s\"", kernel_path);
-    elf_loaded_image_t *image = elf_load(kernel_node, address_space);
-    if(image == NULL) log_panic("CORE", "Failed to load kernel");
-    log("CORE", "Kernel loaded");
-
     // SMP
     if(config_read_bool(config, "SMP", true)) {
         if(!lapic_is_supported()) log_panic("CORE", "LAPIC not supported. LAPIC is required for SMP initialization");
@@ -147,11 +135,19 @@ static int parse_e820() {
         smp_cpu_t *cpus = smp_initialize_aps(madt, smp_rsv_page, address_space);
     }
 
+    // Find kernel
+    char *kernel_path = config_read_string(config, "KERNEL");
+    if(kernel_path == NULL) log_panic("CORE", "No kernel path provided in config");
+    vfs_node_t *kernel_node = vfs_lookup(config_node->vfs, kernel_path);
+    if(kernel_node == NULL) log_panic("CORE", "Kernel not present at \"%s\"", kernel_path);
+
     // Protocol
     char *protocol = config_read_string(config, "PROTOCOL");
     if(protocol == NULL) log_panic("CORE", "No protocol defined in config");
     log("CORE", "Protocol is %s", protocol);
 
     config_free(config);
-    for(;;);
+
+    log_panic("CORE", "Invalid protocol %s", protocol);
+    __builtin_unreachable();
 }

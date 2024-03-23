@@ -1,5 +1,5 @@
 #include "disk.h"
-#include <log.h>
+#include <common/log.h>
 #include <lib/math.h>
 #include <lib/mem.h>
 #include <memory/pmm.h>

@@ -1,5 +1,5 @@
 #include "elf.h"
-#include <log.h>
+#include <common/log.h>
 #include <lib/mem.h>
 #include <lib/math.h>
 #include <memory/pmm.h>

@@ -1,6 +1,6 @@
 #include "config.h"
 #include <stddef.h>
-#include <log.h>
+#include <common/log.h>
 #include <lib/mem.h>
 #include <lib/str.h>
 #include <memory/heap.h>

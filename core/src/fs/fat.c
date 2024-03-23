@@ -1,6 +1,6 @@
 #include "fat.h"
 #include <stdint.h>
-#include <log.h>
+#include <common/log.h>
 #include <lib/str.h>
 #include <lib/mem.h>
 #include <lib/math.h>
@@ -192,6 +192,7 @@ static bool name_to_8_3(char *src, char dest[11]) {
         if(j >= 11 || (!ext && j >= 8)) return false;
         dest[j++] = (src[i] >= 'a' && src[i] <= 'z') ? src[i] - 0x20 : src[i];
     }
+    for(; j < 11; j++) dest[j] = ' ';
     return true;
 }
 

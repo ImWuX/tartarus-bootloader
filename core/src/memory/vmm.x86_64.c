@@ -1,6 +1,6 @@
 #include "vmm.h"
 #include <stddef.h>
-#include <log.h>
+#include <common/log.h>
 #include <lib/mem.h>
 #include <memory/pmm.h>
 #include <sys/cpu.x86_64.h>

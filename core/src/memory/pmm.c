@@ -1,6 +1,6 @@
 #include "pmm.h"
 #include <tartarus.h>
-#include <log.h>
+#include <common/log.h>
 
 #define IS_STRICT(type) ((type) == TARTARUS_MEMORY_MAP_TYPE_USABLE || (type) == TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE)
 

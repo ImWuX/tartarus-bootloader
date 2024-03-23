@@ -1,6 +1,5 @@
 #include "lapic.x86_64.h"
 #include <cpuid.h>
-#include <log.h>
 #include <memory/pmm.h>
 #include <sys/msr.x86_64.h>
 

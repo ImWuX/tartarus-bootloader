@@ -1,6 +1,6 @@
 #include "smp.x86_64.h"
 #include <cpuid.h>
-#include <log.h>
+#include <common/log.h>
 #include <lib/mem.h>
 #include <memory/pmm.h>
 #include <memory/heap.h>
