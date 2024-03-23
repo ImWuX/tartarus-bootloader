@@ -92,3 +92,27 @@ bool config_read_bool(config_t *config, const char *key, bool default_value) {
     if(entry == NULL) return default_value;
     return strcmp(entry->value, "true") == 0 || strcmp(entry->value, "TRUE") == 0;
 }
+
+int config_read_int(config_t *config, const char *key, int default_value) {
+    config_entry_t *entry = find_entry(config, key);
+    if(entry == NULL) return default_value;
+
+    int value = 0;
+    bool negative = false;
+    bool prefix = true;
+    for(size_t i = 0; entry->value[i] != 0; i++) {
+        if(prefix && entry->value[i] == '-') {
+            negative = !negative;
+            continue;
+        }
+        prefix = false;
+        if(entry->value[i] < '0' || entry->value[i] > '9') {
+            log_warning("CONFIG", "Invalid value \"%s\" for %s", entry->value, entry->key);
+            return default_value;
+        }
+        value *= 10;
+        value += entry->value[i] - '0';
+    }
+    if(negative) value *= -1;
+    return value;
+}
