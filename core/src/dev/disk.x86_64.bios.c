@@ -163,10 +163,10 @@ bool disk_read_sector(disk_t *disk, uint64_t lba, uint64_t sector_count, void *d
         regs.eax = (0x42 << 8);
         int_exec(0x13, &regs);
         if(regs.eflags & EFLAGS_CF) return true;
-        lba += disk->optimal_transfer_size;
+        lba += tmp_sec_count;
 
-        memcpy(dest, buf, dap.sector_count * disk->sector_size);
-        dest += disk->sector_size * disk->optimal_transfer_size;
+        memcpy(dest, buf, tmp_sec_count * disk->sector_size);
+        dest += tmp_sec_count * disk->sector_size;
     }
     pmm_free(buf, buf_size);
     return false;
