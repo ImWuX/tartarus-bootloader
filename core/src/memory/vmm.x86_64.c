@@ -57,7 +57,7 @@ void vmm_map(void *address_space, uint64_t paddr, uint64_t vaddr, uint64_t lengt
     }
 }
 
-void *vmm_initialize() {
+void *vmm_create_address_space() {
     void *pml4 = pmm_alloc_page(PMM_AREA_MAX);
     memset(pml4, 0, PMM_PAGE_SIZE);
     return pml4;
