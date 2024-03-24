@@ -3,6 +3,7 @@
 #include <common/log.h>
 #include <common/config.h>
 #include <common/elf.h>
+#include <common/fb.h>
 #include <lib/str.h>
 #include <memory/pmm.h>
 #include <memory/vmm.h>
@@ -69,38 +70,17 @@ static void log_sink(char c) {
     pmm_init_sanitize();
     log("CORE", "Initialized physical memory (%i memory map entries)", e820_size);
 
-    // Protect initial stack
-    pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, 0x3000, 0x5000);
-    pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, (uintptr_t) __tartarus_start, (uintptr_t) __tartarus_end - (uintptr_t) __tartarus_start);
+    // Protect initial stack & tartarus
+    // TODO: the stack claim if flimsy
+    if(pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, 0x1000, 0x7000)) log_panic("CORE", "Failed to claim stack memory");
+    if(pmm_convert(TARTARUS_MEMORY_MAP_TYPE_USABLE, TARTARUS_MEMORY_MAP_TYPE_BOOT_RECLAIMABLE, (uintptr_t) __tartarus_start, (uintptr_t) __tartarus_end - (uintptr_t) __tartarus_start)) log_panic("CORE", "Failed to claim kernel memory");
 
     // Allocate a page early to get one low enough for smp startup
-    void *smp_rsv_page = pmm_alloc_page(PMM_AREA_CONVENTIONAL);
-    if((uintptr_t) smp_rsv_page >= 0x100000) log_panic("CORE", "Unable to reserve a low page for SMP startup");
-
-    // Initialize VMM
-    void *address_space = vmm_initialize();
-    vmm_map(address_space, PMM_PAGE_SIZE, PMM_PAGE_SIZE, HHDM_MIN_SIZE - PMM_PAGE_SIZE, HHDM_FLAGS);
-    vmm_map(address_space, PMM_PAGE_SIZE, HHDM_OFFSET + PMM_PAGE_SIZE, HHDM_MIN_SIZE - PMM_PAGE_SIZE, HHDM_FLAGS);
-
-    uint64_t hhdm_size = HHDM_MIN_SIZE;
-    for(uint16_t i = 0; i < g_pmm_map_size; i++) {
-        if(g_pmm_map[i].base + g_pmm_map[i].length < HHDM_MIN_SIZE) continue;
-        uint64_t base = g_pmm_map[i].base;
-        uint64_t length = g_pmm_map[i].length;
-        if(base < HHDM_MIN_SIZE) {
-            length -= HHDM_MIN_SIZE - base;
-            base = HHDM_MIN_SIZE;
-        }
-        if(base % PMM_PAGE_SIZE != 0) {
-            length += base % PMM_PAGE_SIZE;
-            base -= base % PMM_PAGE_SIZE;
-        }
-        if(length % PMM_PAGE_SIZE != 0) length += PMM_PAGE_SIZE - length % PMM_PAGE_SIZE;
-        if(base + length > hhdm_size) hhdm_size = base + length;
-        vmm_map(address_space, base, base, length, HHDM_FLAGS);
-        vmm_map(address_space, base, HHDM_OFFSET + base, length, HHDM_FLAGS);
+    void *smp_reserved_page = pmm_alloc_page(PMM_AREA_CONVENTIONAL);
+    if((uintptr_t) smp_reserved_page >= 0x100000) {
+        pmm_free_page(smp_reserved_page);
+        smp_reserved_page = NULL;
     }
-    log("CORE", "Initialized virtual memory");
 
     // Initialize disk
     disk_initialize();
@@ -127,27 +107,80 @@ static void log_sink(char c) {
     acpi_rsdp_t *rsdp = acpi_find_rsdp();
     if(!rsdp) log_panic("CORE", "Could not locate RSDP");
 
-    // SMP
-    if(config_read_bool(config, "SMP", true)) {
-        if(!lapic_is_supported()) log_panic("CORE", "LAPIC not supported. LAPIC is required for SMP initialization");
-        acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
-        if(!madt) log_panic("CORE", "ACPI MADT table not present");
-        smp_cpu_t *cpus = smp_initialize_aps(madt, smp_rsv_page, address_space);
-    }
-
     // Find kernel
     char *kernel_path = config_read_string(config, "KERNEL");
     if(kernel_path == NULL) log_panic("CORE", "No kernel path provided in config");
     vfs_node_t *kernel_node = vfs_lookup(config_node->vfs, kernel_path);
     if(kernel_node == NULL) log_panic("CORE", "Kernel not present at \"%s\"", kernel_path);
 
+    // FB
+    int scrw = config_read_int(config, "SCRW", 1920);
+    int scrh = config_read_int(config, "SCRH", 1080);
+    log("CORE", "Screen size is presumed to be %ix%i", scrw, scrh);
+
+    fb_t fb;
+    if(fb_acquire(scrw, scrh, false, &fb)) log_panic("CORE", "Failed to retrieve framebuffer");
+    log("CORE", "Acquired framebuffer (%ux%u)", fb.width, fb.height);
+
     // Protocol
     char *protocol = config_read_string(config, "PROTOCOL");
     if(protocol == NULL) log_panic("CORE", "No protocol defined in config");
     log("CORE", "Protocol is %s", protocol);
 
-    config_free(config);
+    // Protocol: Linux
+    if(strcmp(protocol, "linux") == 0) {
+        char *cmdline = config_read_string(config, "CMD");
 
+        char *ramdisk_path = config_read_string(config, "INITRD");
+        if(ramdisk_path == NULL) log_panic("CORE", "No initrd path provided in config");
+        vfs_node_t *ramdisk_node = vfs_lookup(config_node->vfs, ramdisk_path);
+        if(ramdisk_node == NULL) log_panic("CORE", "Initrd was not present at \"%s\"", ramdisk_path);
+
+        config_free(config);
+        protocol_linux(kernel_node, ramdisk_node, cmdline, rsdp, e820, e820_size, fb);
+    }
+
+    // Protocol: Tartarus
+    if(strcmp(protocol, "tartarus") == 0) {
+        // Setup address space
+        void *address_space = vmm_create_address_space();
+        vmm_map(address_space, PMM_PAGE_SIZE, PMM_PAGE_SIZE, HHDM_MIN_SIZE - PMM_PAGE_SIZE, HHDM_FLAGS);
+        vmm_map(address_space, PMM_PAGE_SIZE, HHDM_OFFSET + PMM_PAGE_SIZE, HHDM_MIN_SIZE - PMM_PAGE_SIZE, HHDM_FLAGS);
+
+        uint64_t hhdm_size = HHDM_MIN_SIZE;
+        for(uint16_t i = 0; i < g_pmm_map_size; i++) {
+            if(g_pmm_map[i].base + g_pmm_map[i].length < HHDM_MIN_SIZE) continue;
+            uint64_t base = g_pmm_map[i].base;
+            uint64_t length = g_pmm_map[i].length;
+            if(base < HHDM_MIN_SIZE) {
+                length -= HHDM_MIN_SIZE - base;
+                base = HHDM_MIN_SIZE;
+            }
+            if(base % PMM_PAGE_SIZE != 0) {
+                length += base % PMM_PAGE_SIZE;
+                base -= base % PMM_PAGE_SIZE;
+            }
+            if(length % PMM_PAGE_SIZE != 0) length += PMM_PAGE_SIZE - length % PMM_PAGE_SIZE;
+            if(base + length > hhdm_size) hhdm_size = base + length;
+            vmm_map(address_space, base, base, length, HHDM_FLAGS);
+            vmm_map(address_space, base, HHDM_OFFSET + base, length, HHDM_FLAGS);
+        }
+        log("CORE", "Initialized virtual memory");
+
+        // Initialize SMP
+        if(config_read_bool(config, "SMP", true)) {
+            if(smp_reserved_page == NULL) log_panic("CORE", "Unable to initialize SMP. No reserved SMP init page");
+            if(!lapic_is_supported()) log_panic("CORE", "LAPIC not supported. LAPIC is required for SMP initialization");
+            acpi_sdt_header_t *madt = acpi_find_table(rsdp, "APIC");
+            if(!madt) log_panic("CORE", "ACPI MADT table not present");
+            smp_cpu_t *cpus = smp_initialize_aps(madt, smp_reserved_page, address_space);
+            log("CORE", "Initialized SMP");
+        }
+
+        config_free(config);
+        log_panic("CORE", "tartarus protocol temporarily unimplemented");
+    }
+    config_free(config);
     log_panic("CORE", "Invalid protocol %s", protocol);
     __builtin_unreachable();
 }
