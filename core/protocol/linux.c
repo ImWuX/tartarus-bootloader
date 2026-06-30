@@ -403,6 +403,7 @@ static_assert(sizeof(boot_params_t) == PMM_GRANULARITY);
         linux_e820_type_t e820_type = LINUX_E820_TYPE_RESERVED;
         switch(g_pmm_map[i].type) {
             case PMM_MAP_TYPE_RESERVED:
+            case PMM_MAP_TYPE_ACPI_TABLES:
             case PMM_MAP_TYPE_ALLOCATED:
             case PMM_MAP_TYPE_EFI_RECLAIMABLE:  e820_type = LINUX_E820_TYPE_RESERVED; break;
             case PMM_MAP_TYPE_FREE:             e820_type = LINUX_E820_TYPE_USABLE; break;

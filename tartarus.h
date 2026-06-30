@@ -1,5 +1,5 @@
 // Tartarus Bootloader API
-// Protocol Version 2.0
+// Protocol Version 3.0
 
 #ifndef __TARTARUS_BOOTLOADER_HEADER
 #define __TARTARUS_BOOTLOADER_HEADER
@@ -41,6 +41,9 @@ typedef enum : uint64_t {
 
     /// Usable memory used by EFI
     TARTARUS_MM_TYPE_EFI_RECLAIMABLE,
+
+    /// Usable memory used by ACPI Tables
+    TARTARUS_MM_TYPE_ACPI_TABLES,
 
     /// Usable memory used by ACPI
     TARTARUS_MM_TYPE_ACPI_RECLAIMABLE,

@@ -22,7 +22,7 @@
 #include "arch/uefi/uefi.h"
 #endif
 
-#define MAJOR_VERSION 2
+#define MAJOR_VERSION 3
 #define MINOR_VERSION 0
 
 #define BSP_STACK_PGCNT 16
@@ -38,6 +38,15 @@
 
     ptm_address_space_t *address_space = arch_ptm_create_address_space();
 
+    // Find ACPI
+    acpi_rsdp_t *rsdp = NULL;
+    if(config_find_bool(config, "find_rsdp", true)) {
+        rsdp = arch_acpi_find_rsdp();
+        if(rsdp == NULL) log(LOG_LEVEL_WARN, "could not locate ACPI RSDP");
+        arch_acpi_map_tables(rsdp);
+    }
+    log(LOG_LEVEL_INFO, "RSDP found at %#lx", (uintptr_t) rsdp);
+
     // Freeze the memory map
     size_t frozen_map_size = g_pmm_map_size;
     pmm_map_entry_t *frozen_map = heap_alloc(sizeof(pmm_map_entry_t) * frozen_map_size);
@@ -49,6 +58,7 @@
     for(size_t i = 0; i < frozen_map_size; i++) {
         switch(frozen_map[i].type) {
             case PMM_MAP_TYPE_FREE:
+            case PMM_MAP_TYPE_ACPI_TABLES:
             case PMM_MAP_TYPE_ALLOCATED:
             case PMM_MAP_TYPE_EFI_RECLAIMABLE:
             case PMM_MAP_TYPE_ACPI_RECLAIMABLE: break;
@@ -133,13 +143,6 @@
     // Allocate stack
     void *stack = pmm_alloc(PMM_AREA_STANDARD, BSP_STACK_PGCNT) + (BSP_STACK_PGCNT * PMM_GRANULARITY);
 
-    // Find ACPI
-    acpi_rsdp_t *rsdp = NULL;
-    if(config_find_bool(config, "find_rsdp", true)) {
-        rsdp = arch_acpi_find_rsdp();
-        if(rsdp == NULL) log(LOG_LEVEL_WARN, "could not locate ACPI RSDP");
-    }
-    log(LOG_LEVEL_INFO, "RSDP found at %#lx", (uintptr_t) rsdp);
 
     // Prepare SMP init
 #if defined(__UEFI)
@@ -239,6 +242,7 @@
         tartarus_mm_type_t type;
         switch(g_pmm_map[i].type) {
             case PMM_MAP_TYPE_FREE:             type = TARTARUS_MM_TYPE_USABLE; break;
+            case PMM_MAP_TYPE_ACPI_TABLES:      type = TARTARUS_MM_TYPE_ACPI_TABLES; break;
             case PMM_MAP_TYPE_ALLOCATED:        type = TARTARUS_MM_TYPE_BOOTLOADER_RECLAIMABLE; break;
             case PMM_MAP_TYPE_EFI_RECLAIMABLE:  type = TARTARUS_MM_TYPE_EFI_RECLAIMABLE; break;
             case PMM_MAP_TYPE_ACPI_RECLAIMABLE: type = TARTARUS_MM_TYPE_ACPI_RECLAIMABLE; break;
